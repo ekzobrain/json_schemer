@@ -35,7 +35,7 @@ module JSONSchemer
 
           def validate(instance, instance_location, keyword_location, context)
             needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
-              (root.before_property_validation.any? || root.after_property_validation.any? || root.insert_property_defaults)
+              (root.before_property_validation.any? || root.after_property_validation.any?)
 
             nested = parsed.map.with_index do |subschema, index|
               if needs_isolation
@@ -72,7 +72,7 @@ module JSONSchemer
 
           def validate(instance, instance_location, keyword_location, context)
             needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
-              (root.before_property_validation.any? || root.after_property_validation.any? || root.insert_property_defaults)
+              (root.before_property_validation.any? || root.after_property_validation.any?)
 
             nested = parsed.map.with_index do |subschema, index|
               if needs_isolation
