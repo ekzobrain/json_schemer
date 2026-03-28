@@ -669,6 +669,93 @@ class HooksTest < Minitest::Test
     assert_equal('ref', data.fetch('x'))
   end
 
+  def test_after_property_validation_hook_does_not_corrupt_instance_across_oneOf_subschemas
+    convert_date = proc do |data, property, property_schema, _|
+      if data.key?(property) && property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+        data[property] = Date.iso8601(data[property])
+      end
+    end
+
+    schema = {
+      'oneOf' => [
+        {
+          'required' => ['required_field'],
+          'properties' => {
+            'start_date' => { 'type' => 'string', 'format' => 'date' },
+            'required_field' => { 'type' => 'string' }
+          }
+        },
+        {
+          'properties' => {
+            'start_date' => { 'type' => 'string' }
+          }
+        }
+      ]
+    }
+
+    data = { 'start_date' => '2020-09-03' }
+    assert(JSONSchemer.schema(schema, after_property_validation: [convert_date]).valid?(data))
+    assert_equal('2020-09-03', data['start_date'])
+  end
+
+  def test_after_property_validation_hook_does_not_corrupt_instance_across_anyOf_subschemas
+    convert_date = proc do |data, property, property_schema, _|
+      if data.key?(property) && property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+        data[property] = Date.iso8601(data[property])
+      end
+    end
+
+    schema = {
+      'anyOf' => [
+        {
+          'required' => ['required_field'],
+          'properties' => {
+            'start_date' => { 'type' => 'string', 'format' => 'date' },
+            'required_field' => { 'type' => 'string' }
+          }
+        },
+        {
+          'properties' => {
+            'start_date' => { 'type' => 'string' }
+          }
+        }
+      ]
+    }
+
+    data = { 'start_date' => '2020-09-03' }
+    assert(JSONSchemer.schema(schema, after_property_validation: [convert_date]).valid?(data))
+    assert_equal('2020-09-03', data['start_date'])
+  end
+
+  def test_after_property_validation_hook_applies_changes_from_matching_oneOf_subschema
+    convert_date = proc do |data, property, property_schema, _|
+      if data.key?(property) && property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+        data[property] = Date.iso8601(data[property])
+      end
+    end
+
+    schema = {
+      'oneOf' => [
+        {
+          'properties' => {
+            'start_date' => { 'type' => 'string', 'format' => 'date' }
+          }
+        },
+        {
+          'required' => ['required_field'],
+          'properties' => {
+            'start_date' => { 'type' => 'string' },
+            'required_field' => { 'type' => 'string' }
+          }
+        }
+      ]
+    }
+
+    data = { 'start_date' => '2020-09-03' }
+    assert(JSONSchemer.schema(schema, after_property_validation: [convert_date]).valid?(data))
+    assert_equal(Date.new(2020, 9, 3), data['start_date'])
+  end
+
   def test_insert_property_defaults_compare_by_identity
     data = JSON.parse(%q({
       "fieldname": [

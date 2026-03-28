@@ -52,5 +52,16 @@ module JSONSchemer
         obj
       end
     end
+
+    def deep_dup_instance(obj)
+      case obj
+      when Hash
+        obj.transform_values { |v| deep_dup_instance(v) }
+      when Array
+        obj.map { |item| deep_dup_instance(item) }
+      else
+        obj
+      end
+    end
   end
 end

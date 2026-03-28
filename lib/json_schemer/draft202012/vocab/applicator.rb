@@ -34,8 +34,26 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
+              (root.before_property_validation.any? || root.after_property_validation.any? || root.insert_property_defaults)
+
             nested = parsed.map.with_index do |subschema, index|
-              subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+              if needs_isolation
+                original = context.original_instance(instance_location)
+                original_backup = deep_dup_instance(original)
+                instance_backup = deep_stringify_keys(instance)
+
+                subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+
+                unless subschema_result.valid
+                  original.replace(original_backup)
+                  instance.replace(instance_backup)
+                end
+
+                subschema_result
+              else
+                subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+              end
             end
             result(instance, instance_location, keyword_location, nested.any?(&:valid), nested)
           end
@@ -53,8 +71,26 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
+              (root.before_property_validation.any? || root.after_property_validation.any? || root.insert_property_defaults)
+
             nested = parsed.map.with_index do |subschema, index|
-              subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+              if needs_isolation
+                original = context.original_instance(instance_location)
+                original_backup = deep_dup_instance(original)
+                instance_backup = deep_stringify_keys(instance)
+
+                subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+
+                unless subschema_result.valid
+                  original.replace(original_backup)
+                  instance.replace(instance_backup)
+                end
+
+                subschema_result
+              else
+                subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+              end
             end
             valid_count = nested.count(&:valid)
             result(instance, instance_location, keyword_location, valid_count == 1, nested, :ignore_nested => valid_count > 1)
