@@ -41,13 +41,12 @@ module JSONSchemer
               if needs_isolation
                 original = context.original_instance(instance_location)
                 original_backup = deep_dup_instance(original)
-                instance_backup = deep_stringify_keys(instance)
 
                 subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
 
                 unless subschema_result.valid
                   original.replace(original_backup)
-                  instance.replace(instance_backup)
+                  instance.replace(deep_stringify_keys(original_backup))
                 end
 
                 subschema_result
@@ -78,13 +77,12 @@ module JSONSchemer
               if needs_isolation
                 original = context.original_instance(instance_location)
                 original_backup = deep_dup_instance(original)
-                instance_backup = deep_stringify_keys(instance)
 
                 subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
 
                 unless subschema_result.valid
                   original.replace(original_backup)
-                  instance.replace(instance_backup)
+                  instance.replace(deep_stringify_keys(original_backup))
                 end
 
                 subschema_result
