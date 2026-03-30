@@ -16,7 +16,11 @@ require "minitest/autorun"
 def fetch(location, limit = 10)
   raise if limit.zero?
   uri = URI(location)
-  response = Net::HTTP.get_response(uri)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = uri.scheme == 'https'
+  # ignore certificate verification to avoid errors with outdated CRL stores
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  response = http.get(uri.request_uri)
   case response
   when Net::HTTPSuccess
     response.body

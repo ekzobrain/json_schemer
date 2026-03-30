@@ -241,7 +241,8 @@ class RefTest < Minitest::Test
   end
 
   def test_net_http_ref_resolver
-    schemer = JSONSchemer.schema({ '$ref' => 'https://json-schema.org/draft/2020-12/schema' }, :ref_resolver => 'net/http')
+    schemer = JSONSchemer.schema({ '$ref' => 'https://json-schema.org/draft/2020-12/schema' },
+                                 :ref_resolver => proc { |uri| JSON.parse(fetch(uri)) })
     assert(schemer.valid?({ 'type' => 'string' }))
     refute(schemer.valid?({ 'type' => 1 }))
   end
