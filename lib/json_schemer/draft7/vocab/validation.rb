@@ -39,6 +39,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => nested.any?)
           end
+
         end
 
         class ContentEncoding < Draft202012::Vocab::Content::ContentEncoding
@@ -53,6 +54,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, :annotation => annotation)
           end
+
         end
 
         class ContentMediaType < Draft202012::Vocab::Content::ContentMediaType
@@ -68,6 +70,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, :annotation => annotation)
           end
+
         end
       end
     end

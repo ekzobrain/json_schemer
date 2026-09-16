@@ -20,6 +20,15 @@ module JSONSchemer
             end
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested)
           end
+
+          def valid_instance?(instance, context)
+            parsed.each do |subschema|
+              valid = subschema.valid_instance?(instance, context)
+              return nil if valid.nil?
+              return false unless valid
+            end
+            true
+          end
         end
 
         class AnyOf < Keyword
@@ -38,6 +47,17 @@ module JSONSchemer
               subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
             end
             result(instance, instance_location, keyword_location, nested.any?(&:valid), nested)
+          end
+
+          def valid_instance?(instance, context)
+            saw_supported = false
+            parsed.each do |subschema|
+              valid = subschema.valid_instance?(instance, context)
+              return nil if valid.nil?
+              saw_supported = true
+              return true if valid
+            end
+            !saw_supported ? nil : false
           end
         end
 
@@ -59,6 +79,17 @@ module JSONSchemer
             valid_count = nested.count(&:valid)
             result(instance, instance_location, keyword_location, valid_count == 1, nested, :ignore_nested => valid_count > 1)
           end
+
+          def valid_instance?(instance, context)
+            valid_count = 0
+            parsed.each do |subschema|
+              valid = subschema.valid_instance?(instance, context)
+              return nil if valid.nil?
+              valid_count += 1 if valid
+              return false if valid_count > 1
+            end
+            valid_count == 1
+          end
         end
 
         class Not < Keyword
@@ -74,6 +105,11 @@ module JSONSchemer
             subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
             result(instance, instance_location, keyword_location, !subschema_result.valid, subschema_result.nested)
           end
+
+          def valid_instance?(instance, context)
+            valid = parsed.valid_instance?(instance, context)
+            valid.nil? ? nil : !valid
+          end
         end
 
         class If < Keyword
@@ -85,6 +121,7 @@ module JSONSchemer
             subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
             result(instance, instance_location, keyword_location, true, subschema_result.nested, :annotation => subschema_result.valid)
           end
+
         end
 
         class Then < Keyword
@@ -101,6 +138,7 @@ module JSONSchemer
             subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
             result(instance, instance_location, keyword_location, subschema_result.valid, subschema_result.nested)
           end
+
         end
 
         class Else < Keyword
@@ -117,6 +155,7 @@ module JSONSchemer
             subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
             result(instance, instance_location, keyword_location, subschema_result.valid, subschema_result.nested)
           end
+
         end
 
         class DependentSchemas < Keyword
@@ -144,6 +183,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested)
           end
+
         end
 
         class PrefixItems < Keyword
@@ -171,6 +211,19 @@ module JSONSchemer
             end
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => (nested.size - 1))
+          end
+
+          def valid_instance?(instance, context)
+            return true unless instance.is_a?(Array)
+
+            limit = instance.size < parsed.size ? instance.size : parsed.size
+            limit.times do |index|
+              valid = parsed.fetch(index).valid_instance?(instance.fetch(index), context)
+              return nil if valid.nil?
+              return false unless valid
+            end
+
+            true
           end
         end
 
@@ -201,6 +254,19 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => nested.any?)
           end
+
+          def valid_instance?(instance, context)
+            return true unless instance.is_a?(Array)
+            return nil if schema.parsed.key?('prefixItems')
+
+            instance.each do |item|
+              valid = parsed.valid_instance?(item, context)
+              return nil if valid.nil?
+              return false unless valid
+            end
+
+            true
+          end
         end
 
         class Contains < Keyword
@@ -227,6 +293,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, annotation.size >= min_contains, nested, :annotation => annotation, :ignore_nested => true)
           end
+
         end
 
         class Properties < Keyword
@@ -274,6 +341,20 @@ module JSONSchemer
             end
 
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)
+          end
+
+          def valid_instance?(instance, context)
+            return true unless instance.is_a?(Hash)
+            return nil if root.before_property_validation.any? || root.after_property_validation.any?
+
+            parsed.each do |property, subschema|
+              next unless instance.key?(property)
+              valid = subschema.valid_instance?(instance.fetch(property), context)
+              return nil if valid.nil?
+              return false unless valid
+            end
+
+            true
           end
         end
 
@@ -340,6 +421,22 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => evaluated)
           end
+
+          def valid_instance?(instance, context)
+            return true unless instance.is_a?(Hash)
+
+            property_keys = schema.parsed['properties']&.parsed&.keys || []
+            return nil if schema.parsed.key?('patternProperties')
+
+            instance.each do |key, value|
+              next if property_keys.include?(key)
+              valid = parsed.valid_instance?(value, context)
+              return nil if valid.nil?
+              return false unless valid
+            end
+
+            true
+          end
         end
 
         class PropertyNames < Keyword
@@ -364,6 +461,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested)
           end
+
         end
 
         class Dependencies < Keyword
@@ -396,6 +494,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested)
           end
+
         end
       end
     end

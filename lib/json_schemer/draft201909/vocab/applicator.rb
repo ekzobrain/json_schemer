@@ -44,6 +44,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => (nested.size - 1))
           end
+
         end
 
         class AdditionalItems < Keyword
@@ -73,6 +74,7 @@ module JSONSchemer
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => nested.any?)
           end
+
         end
 
         class UnevaluatedItems < Keyword
