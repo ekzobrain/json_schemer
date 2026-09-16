@@ -260,8 +260,15 @@ module JSONSchemer
               required_keys -= inapplicable_access_mode_keys
             end
 
-            missing_keys = required_keys - instance.keys
-            result(instance, instance_location, keyword_location, missing_keys.none?, :details => { 'missing_keys' => missing_keys })
+            missing_keys = nil
+            required_keys.each do |required_key|
+              next if instance.key?(required_key)
+              missing_keys ||= []
+              missing_keys << required_key
+            end
+
+            details = { 'missing_keys' => missing_keys } if missing_keys
+            result(instance, instance_location, keyword_location, !missing_keys, :details => details)
           end
         end
 
