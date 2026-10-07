@@ -70,9 +70,10 @@ module JSONSchemer
       regexp_resolver: configuration.regexp_resolver,
       output_format: configuration.output_format,
       resolve_enumerators: configuration.resolve_enumerators,
-      access_mode: configuration.access_mode
+      access_mode: configuration.access_mode,
+      stringified_keys: configuration.stringified_keys
     )
-      @value = deep_stringify_keys(value)
+      @value = stringified_keys ? value : deep_stringify_keys(value)
       @parent = parent
       @root = root
       @keyword = keyword
@@ -96,7 +97,8 @@ module JSONSchemer
         :regexp_resolver => regexp_resolver,
         :output_format => output_format,
         :resolve_enumerators => resolve_enumerators,
-        :access_mode => access_mode
+        :access_mode => access_mode,
+        :stringified_keys => stringified_keys
       )
       @parsed = parse
     end
@@ -106,7 +108,7 @@ module JSONSchemer
       valid.nil? ? validate(instance, :output_format => 'flag', **options).fetch('valid') : valid
     end
 
-    def validate(instance, output_format: @configuration.output_format, resolve_enumerators: @configuration.resolve_enumerators, access_mode: @configuration.access_mode, stringified_keys: false)
+    def validate(instance, output_format: @configuration.output_format, resolve_enumerators: @configuration.resolve_enumerators, access_mode: @configuration.access_mode, stringified_keys: @configuration.stringified_keys)
       instance_location = Location.root
       context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode)
       validation_instance = stringified_keys ? instance : deep_stringify_keys(instance)
@@ -175,7 +177,7 @@ module JSONSchemer
       end
     end
 
-    def validate_instance_boolean(instance, stringified_keys: false, access_mode: @configuration.access_mode, **)
+    def validate_instance_boolean(instance, stringified_keys: @configuration.stringified_keys, access_mode: @configuration.access_mode, **)
       return nil if insert_property_defaults || root.custom_keywords.any?
 
       context = Context.new(instance, [], nil, true, access_mode)
