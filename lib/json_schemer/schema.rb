@@ -1,44 +1,59 @@
 # frozen_string_literal: true
 module JSONSchemer
   class Schema
-    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached) do
-      # Property hooks change the instance in place. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`,
-      # `contains`) run in a transaction: hashes are recorded (shallow copy) before hooks change them and restored
-      # afterwards, so failed attempts leave no changes behind and attempts don't see each other's changes. Hooks must
-      # only assign properties of the hash they're given for this to work. `transactions` is nil when there are no
-      # hooks, which turns all of this off.
+    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls) do
+      # Property hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`)
+      # run in a transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
+      # - hashes are recorded (shallow copy) before `before_property_validation` hooks change them and are restored
+      #   afterwards (hooks must only assign properties of the hash they're given for this to work);
+      # - `after_property_validation` hook calls are deferred until the whole instance is validated (so no keyword
+      #   sees their changes) and dropped with failed attempts.
+      # `transactions` is nil when there are no hooks, which turns all of this off.
+      Transaction = Struct.new(:objects, :calls)
 
-      # Runs the block in a transaction and rolls it back. Returns the block's value and the changes made, which can
-      # be re-applied with `apply_changes`.
+      # Runs the block in a transaction and rolls it back. Returns the block's value and the transaction, which can be
+      # re-applied with `apply_changes`.
       def isolate(instance)
         return yield unless transactions && (instance.is_a?(Hash) || instance.is_a?(Array))
 
-        changes = {}
-        changes.compare_by_identity
-        transactions << changes
+        objects = {}
+        objects.compare_by_identity
+        transaction = Transaction.new(objects, [])
+        transactions << transaction
         begin
           value = yield
         ensure
           transactions.pop
         end
 
-        changes.each do |object, change|
+        objects.each do |object, change|
           change << object.dup
           object.replace(change.first)
         end
 
-        [value, changes]
+        [value, transaction]
       end
 
-      def apply_changes(changes)
-        changes&.each do |object, (before, after)|
-          transactions.last[object] ||= [before] if transactions.any?
+      def apply_changes(transaction)
+        return unless transaction
+        transaction.objects.each do |object, (before, after)|
+          transactions.last.objects[object] ||= [before] if transactions.any?
           object.replace(after)
         end
+        (transactions.last&.calls || deferred_calls).concat(transaction.calls)
       end
 
       def record_change(object)
-        transactions.last[object] ||= [object.dup] if transactions.any?
+        transactions.last.objects[object] ||= [object.dup] if transactions.any?
+      end
+
+      def defer(&call)
+        (transactions.last&.calls || deferred_calls) << call
+      end
+
+      def run_deferred_calls
+        deferred_calls.each(&:call)
+        deferred_calls.clear
       end
 
       def original_instance(instance_location)
@@ -175,13 +190,15 @@ module JSONSchemer
 
     def validate(instance, output_format: @configuration.output_format, resolve_enumerators: @configuration.resolve_enumerators, access_mode: @configuration.access_mode, stringified_keys: @configuration.stringified_keys)
       instance_location = Location.root
-      context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode, stringified_keys, property_hooks? ? [] : nil)
+      context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode, stringified_keys, property_hooks? ? [] : nil, nil, [])
       validation_instance = stringified_keys ? instance : deep_stringify_keys(instance)
       result = validate_instance(validation_instance, instance_location, root_keyword_location, context)
       if insert_property_defaults && result.insert_property_defaults(context, &property_default_resolver)
+        context.deferred_calls.clear
         validation_instance = stringified_keys ? instance : deep_stringify_keys(instance)
         result = validate_instance(validation_instance, instance_location, root_keyword_location, context)
       end
+      context.run_deferred_calls
       output = result.output(output_format)
       resolve_enumerators!(output) if resolve_enumerators
       output
@@ -249,7 +266,7 @@ module JSONSchemer
     def validate_instance_boolean(instance, stringified_keys: @configuration.stringified_keys, access_mode: @configuration.access_mode, **)
       return nil if insert_property_defaults || root.custom_keywords.any?
 
-      context = Context.new(instance, [], nil, true, access_mode, stringified_keys, property_hooks? ? [] : nil)
+      context = Context.new(instance, [], nil, true, access_mode, stringified_keys, property_hooks? ? [] : nil, nil, [])
       instance = stringified_keys ? instance : deep_stringify_keys(instance)
       valid_instance?(instance, context)
     end

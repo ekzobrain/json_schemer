@@ -213,7 +213,7 @@ JSONSchemer.schema(
     data[property] ||= 42
   end,
 
-  # modify properties after their values are validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
+  # modify properties after the whole instance is validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
   # Proc/[Proc]
   # default: nil
   after_property_validation: proc do |data, property, property_schema, _parent|
@@ -258,9 +258,9 @@ JSONSchemer.schema(
 `before_property_validation` and `after_property_validation` hooks are called with the object being validated (`data`), a property name, the property's schema and the parent schema, for every property listed in a schema's `properties`, whether or not it is present in `data`. Hooks are called in the order given, each for all properties.
 
 - `before_property_validation` hooks run when validation of a schema with `properties` starts, before any of its keywords, so `required`, `oneOf`, `if`, `dependentRequired`, etc. all see the changes.
-- `after_property_validation` hooks run in `properties`, after the property values are validated.
+- `after_property_validation` hooks run once the whole instance is validated, so no keyword sees their changes (eg converting a `format: date` string to a `Date` doesn't fail a `type: string` in `patternProperties`, another `allOf` subschema or a parent's `enum`). They're called in validation order: nested objects before their parents.
 
-Hooks that are run while trying subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` change data in a transaction: every subschema sees the same data, and changes are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, hooks must only assign properties of the `data` they're given (`data[property] = value`) rather than modify nested objects in place.
+Subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` are only tried, so hooks run while trying them are applied in a transaction: every subschema sees the same data, and changes (and `after_property_validation` calls) are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, `before_property_validation` hooks must only assign properties of the `data` they're given (`data[property] = value`) rather than modify nested objects in place.
 
 `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` is a `before_property_validation` hook that inserts `default` values of missing properties (deep copied). Unlike `insert_property_defaults`, it inserts defaults before validation instead of re-validating the instance afterwards, so hooks run only once. Combined with a hook that computes values, defaults are available to the computation:
 

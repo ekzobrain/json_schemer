@@ -367,14 +367,13 @@ module JSONSchemer
 
             if root.after_property_validation.any?
               original_instance = caller_instance(instance, instance_location, context)
-              context.record_change(original_instance)
-              context.record_change(instance)
-              root.after_property_validation.each do |hook|
-                parsed.each do |property, subschema|
-                  hook.call(original_instance, property, subschema.value, schema.value)
+              context.defer do
+                root.after_property_validation.each do |hook|
+                  parsed.each do |property, subschema|
+                    hook.call(original_instance, property, subschema.value, schema.value)
+                  end
                 end
               end
-              sync_instance(instance, original_instance, context)
             end
 
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)

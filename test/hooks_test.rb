@@ -516,6 +516,46 @@ class HooksTest < Minitest::Test
     assert_isolated(schema, { 'currency' => 'EUR' }, true, { 'currency' => 'EUR', 'total' => 1 }, before_property_validation: [compute])
   end
 
+  def test_after_property_validation_changes_are_not_validated
+    data = { 'start_date' => '2020-09-03', 'nested' => { 'end_date' => '2020-09-04' } }
+    converted = { 'start_date' => Date.new(2020, 9, 3), 'nested' => { 'end_date' => Date.new(2020, 9, 4) } }
+    date = { 'type' => 'string', 'format' => 'date' }
+    schemas = [
+      { 'properties' => { 'start_date' => date, 'nested' => { 'properties' => { 'end_date' => date } } }, 'patternProperties' => { '_date$' => { 'type' => 'string' } } },
+      { 'properties' => { 'start_date' => date, 'nested' => { 'properties' => { 'end_date' => date } } }, 'enum' => [data] },
+      { 'allOf' => [{ 'properties' => { 'start_date' => date, 'nested' => { 'properties' => { 'end_date' => date } } } }, { 'properties' => { 'start_date' => { 'type' => 'string' } } }] },
+      { 'properties' => { 'nested' => { 'properties' => { 'end_date' => date } } }, 'required' => ['nested'], 'const' => { 'start_date' => '2020-09-03', 'nested' => { 'end_date' => '2020-09-04' } } }
+    ]
+    schemas.each do |schema|
+      expected = schema.key?('const') ? converted.merge('start_date' => '2020-09-03') : converted
+      assert_isolated(schema, data, true, expected, after_property_validation: [CONVERT_DATE])
+    end
+  end
+
+  def test_after_property_validation_runs_once_after_validation_for_applicable_subschemas
+    calls = []
+    hook = proc { |data, property, _property_schema, _parent| calls << [property, data.fetch(property, nil)] if data.key?(property) }
+    schema = {
+      'properties' => { 'outer' => { 'properties' => { 'inner' => {} } } },
+      'oneOf' => [
+        { 'properties' => { 'kind' => { 'const' => 'a' } }, 'required' => ['kind'] },
+        { 'properties' => { 'kind' => { 'const' => 'b' } }, 'required' => ['kind'] }
+      ],
+      'not' => { 'properties' => { 'missing' => {} }, 'required' => ['missing'] },
+      'if' => { 'properties' => { 'kind' => {} }, 'required' => ['missing'] },
+      'contains' => true
+    }
+
+    [{}, { insert_property_defaults: true }].each do |options|
+      calls.clear
+      data = { 'kind' => 'b', 'outer' => { 'inner' => 1 } }
+      assert(JSONSchemer.schema(schema, after_property_validation: [hook], **options).valid?(data))
+      # in validation order (`oneOf` before `properties`, nested objects before their parents), only the valid `oneOf`
+      # subschema, nothing from `not` and the failed `if`
+      assert_equal([['kind', 'b'], ['inner', 1], ['outer', { 'inner' => 1 }]], calls)
+    end
+  end
+
   def test_before_property_validation_runs_once
     calls = Hash.new(0)
     counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }
