@@ -192,7 +192,7 @@ module JSONSchemer
         if result.source.is_a?(Schema::PROPERTIES_KEYWORD_CLASS) && result.instance.is_a?(Hash)
           result.source.parsed.each do |property, schema|
             next if result.instance.key?(property)
-            next unless default = default_keyword_instance(schema)
+            next unless default = schema.default_keyword_instance
             instance_location = Location.join(result.instance_location, property)
             keyword_location = Location.join(Location.join(result.keyword_location, property), default.keyword)
             default_result = default.validate(nil, instance_location, keyword_location, nil)
@@ -228,16 +228,6 @@ module JSONSchemer
 
     def resolved_keyword_location
       @resolved_keyword_location ||= Location.resolve(keyword_location)
-    end
-
-    def default_keyword_instance(schema)
-      schema.parsed.fetch('default') do
-        schema.parsed.find do |_keyword, keyword_instance|
-          next unless keyword_instance.respond_to?(:ref_schema)
-          next unless default = default_keyword_instance(keyword_instance.ref_schema)
-          break default
-        end
-      end
     end
 
     def interpolation_variables

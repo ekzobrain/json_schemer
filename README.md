@@ -289,7 +289,7 @@ data
 # => {"price"=>10, "quantity"=>1, "total"=>10}
 ```
 
-`INSERT_PROPERTY_DEFAULT` only uses `default` defined directly in a property schema (not behind `$ref`).
+Like `insert_property_defaults`, it looks up defaults behind `$ref`, `$dynamicRef` and `$recursiveRef` (when passed directly in `before_property_validation`; called from another hook, it only uses `default` in the given property schema). The two differ when subschemas define different defaults for the same property: `insert_property_defaults` skips conflicting defaults, while the hook inserts the first one that applies (in keyword evaluation order) and later subschemas validate it.
 
 ## Global Configuration
 

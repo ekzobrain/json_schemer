@@ -38,7 +38,7 @@ module JSONSchemer
       end
 
       def record_change(object)
-        transactions.last[object] ||= [object.dup] if transactions&.any?
+        transactions.last[object] ||= [object.dup] if transactions.any?
       end
 
       def original_instance(instance_location)
@@ -94,12 +94,14 @@ module JSONSchemer
         value
       end
     end
-    private_constant :DEEP_COPY_DEFAULT
 
     # `before_property_validation` hook that inserts `default` values of missing properties. Unlike
     # `insert_property_defaults`, defaults are inserted before the schema is validated (so `required`, `oneOf`, etc.
     # see them) and without a second validation pass. Defaults inserted in subschemas that turn out not to apply
     # (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back.
+    # When passed in `before_property_validation` itself, defaults are also looked up behind `$ref`, `$dynamicRef` and
+    # `$recursiveRef` like `insert_property_defaults` does (see `Properties#before_property_validation`). Called
+    # directly, it only uses `default` in the given property schema.
     INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent|
       next unless property_schema.is_a?(Hash) && property_schema.key?('default')
       next if data.key?(property) || data.key?(property.to_sym)
@@ -271,6 +273,17 @@ module JSONSchemer
       ensure
         context.dynamic_scope.pop
         context.adjacent_results = original_adjacent_results
+      end
+    end
+
+    # `default` keyword of this schema, or else the first one found behind its references (depth first).
+    def default_keyword_instance
+      parsed.fetch('default') do
+        parsed.find do |_keyword, keyword_instance|
+          next unless keyword_instance.respond_to?(:ref_schema)
+          next unless default = keyword_instance.ref_schema.default_keyword_instance
+          break default
+        end
       end
     end
 
