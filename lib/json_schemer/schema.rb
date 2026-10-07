@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module JSONSchemer
   class Schema
-    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions) do
+    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached) do
       # Property hooks change the instance in place. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`,
       # `contains`) run in a transaction: hashes are recorded (shallow copy) before hooks change them and restored
       # afterwards, so failed attempts leave no changes behind and attempts don't see each other's changes. Hooks must

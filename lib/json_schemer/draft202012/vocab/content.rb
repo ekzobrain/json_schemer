@@ -43,7 +43,14 @@ module JSONSchemer
             return result(instance, instance_location, keyword_location, true) unless context.adjacent_results.key?(ContentMediaType)
 
             parsed_instance = context.adjacent_results.fetch(ContentMediaType).annotation
-            annotation = parsed.validate_instance(parsed_instance, instance_location, keyword_location, context)
+            # decoded content isn't part of the caller's data
+            detached = context.detached
+            context.detached = true
+            begin
+              annotation = parsed.validate_instance(parsed_instance, instance_location, keyword_location, context)
+            ensure
+              context.detached = detached
+            end
 
             result(instance, instance_location, keyword_location, true, :annotation => annotation.to_output_unit)
           end

@@ -120,6 +120,48 @@ class JSONSchemaTestSuiteTest < Minitest::Test
     end
   end
 
+  # Property hooks (which enable transactions and the before-validation pass) and `stringified_keys` must not change
+  # validation results.
+  def test_json_schema_test_suite_with_property_hooks_and_stringified_keys
+    noop = proc { |_data, _property, _property_schema, _parent| }
+    modes = {
+      'hooks' => { :before_property_validation => [noop], :after_property_validation => [noop] },
+      'stringified_keys' => { :stringified_keys => true },
+      'hooks and stringified_keys' => { :before_property_validation => [noop], :after_property_validation => [noop], :stringified_keys => true }
+    }
+
+    DRAFTS.each do |draft, meta_schema|
+      Dir["JSON-Schema-Test-Suite/tests/#{draft}/**/*.json"].each do |file|
+        JSON.parse(File.read(file)).each do |defn|
+          tests, schema = defn.values_at('tests', 'schema')
+          options = {
+            :meta_schema => meta_schema,
+            :format => file.start_with?("JSON-Schema-Test-Suite/tests/#{draft}/optional/"),
+            :ref_resolver => REF_RESOLVER,
+            :regexp_resolver => 'ecma'
+          }
+          schemer = JSONSchemer::Schema.new(schema, **options)
+          mode_schemers = modes.transform_values { |mode_options| JSONSchemer::Schema.new(schema, **options, **mode_options) }
+
+          tests.each do |test|
+            data, valid = test.values_at('data', 'valid')
+            errors = schemer.validate(data, :output_format => 'classic').map { |error| error.slice('data_pointer', 'schema_pointer', 'type') }
+
+            mode_schemers.each do |mode, mode_schemer|
+              message = "#{mode}: #{file}: #{defn.fetch('description')}: #{test.fetch('description')}"
+              mode_data = Marshal.load(Marshal.dump(data))
+              assert_equal(valid, mode_schemer.valid?(mode_data), message)
+              assert_equal(valid, mode_schemer.validate(mode_data, :output_format => 'basic').fetch('valid'), message)
+              mode_errors = mode_schemer.validate(mode_data, :output_format => 'classic').map { |error| error.slice('data_pointer', 'schema_pointer', 'type') }
+              assert_equal(errors, mode_errors, message)
+              assert_equal(data, mode_data, message)
+            end
+          end
+        end
+      end
+    end
+  end
+
   def test_json_schema_test_suite_output
     OUTPUT_DRAFTS.each do |draft, _meta_schema|
       Dir["JSON-Schema-Test-Suite/output-tests/#{draft}/content/**/*.json"].each do |file|

@@ -58,14 +58,15 @@ module JSONSchemer
     end
 
     # Object in the caller's data at `instance_location`, which hooks modify. With `stringified_keys` the validated
-    # instance is the caller's data itself, otherwise it is a key-stringified copy that must be looked up.
+    # instance is the caller's data itself, otherwise it is a key-stringified copy that must be looked up. Instances
+    # that aren't part of the caller's data (`detached`, eg decoded `contentSchema` content) are used as is.
     def caller_instance(instance, instance_location, context)
-      context.stringified_keys ? instance : context.original_instance(instance_location)
+      context.stringified_keys || context.detached ? instance : context.original_instance(instance_location)
     end
 
     # Brings the validated instance in line with changes made to the caller's data.
     def sync_instance(instance, original_instance, context)
-      instance.replace(deep_stringify_keys(original_instance)) unless context.stringified_keys
+      instance.replace(deep_stringify_keys(original_instance)) unless context.stringified_keys || context.detached
     end
 
   end

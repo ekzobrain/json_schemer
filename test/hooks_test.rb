@@ -554,6 +554,23 @@ class HooksTest < Minitest::Test
     refute_same(schema.dig('properties', 'a', 'default', 'x'), data.fetch('a').fetch('x'))
   end
 
+  def test_hooks_with_content_schema
+    seen = []
+    hook = proc { |data, property, _property_schema, _parent| seen << data.dup if property == 'a' }
+    schema = {
+      'contentMediaType' => 'application/json',
+      'contentSchema' => { 'properties' => { 'a' => { 'type' => 'integer', 'default' => 1 } }, 'required' => ['a'] }
+    }
+    [false, true].each do |stringified_keys|
+      seen.clear
+      schemer = JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, hook], stringified_keys: stringified_keys)
+      data = '{}'
+      assert(schemer.valid?(data))
+      assert_equal('{}', data)
+      assert_equal([{ 'a' => 1 }], seen)
+    end
+  end
+
   def test_insert_property_default_hook_with_computed_values
     compute = proc do |data, property, property_schema, _parent|
       if property_schema.is_a?(Hash) && property_schema.key?('x-sum')
