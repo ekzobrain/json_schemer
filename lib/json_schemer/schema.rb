@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module JSONSchemer
   class Schema
-    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode) do
+    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys) do
       def original_instance(instance_location)
         Hana::Pointer.parse(Location.resolve(instance_location)).reduce(instance) do |obj, token|
           if obj.is_a?(Array)
@@ -110,7 +110,7 @@ module JSONSchemer
 
     def validate(instance, output_format: @configuration.output_format, resolve_enumerators: @configuration.resolve_enumerators, access_mode: @configuration.access_mode, stringified_keys: @configuration.stringified_keys)
       instance_location = Location.root
-      context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode)
+      context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode, stringified_keys)
       validation_instance = stringified_keys ? instance : deep_stringify_keys(instance)
       result = validate_instance(validation_instance, instance_location, root_keyword_location, context)
       if insert_property_defaults && result.insert_property_defaults(context, &property_default_resolver)
@@ -180,7 +180,7 @@ module JSONSchemer
     def validate_instance_boolean(instance, stringified_keys: @configuration.stringified_keys, access_mode: @configuration.access_mode, **)
       return nil if insert_property_defaults || root.custom_keywords.any?
 
-      context = Context.new(instance, [], nil, true, access_mode)
+      context = Context.new(instance, [], nil, true, access_mode, stringified_keys)
       instance = stringified_keys ? instance : deep_stringify_keys(instance)
       valid_instance?(instance, context)
     end

@@ -48,14 +48,14 @@ module JSONSchemer
 
             nested = parsed.map.with_index do |subschema, index|
               if needs_isolation
-                original = context.original_instance(instance_location)
+                original = caller_instance(instance, instance_location, context)
                 original_backup = deep_dup_instance(original)
 
                 subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
 
                 unless subschema_result.valid
                   original.replace(original_backup)
-                  instance.replace(deep_stringify_keys(original_backup))
+                  sync_instance(instance, original, context)
                 end
 
                 subschema_result
@@ -95,14 +95,14 @@ module JSONSchemer
 
             nested = parsed.map.with_index do |subschema, index|
               if needs_isolation
-                original = context.original_instance(instance_location)
+                original = caller_instance(instance, instance_location, context)
                 original_backup = deep_dup_instance(original)
 
                 subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
 
                 unless subschema_result.valid
                   original.replace(original_backup)
-                  instance.replace(deep_stringify_keys(original_backup))
+                  sync_instance(instance, original, context)
                 end
 
                 subschema_result
@@ -345,13 +345,13 @@ module JSONSchemer
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
             if root.before_property_validation.any?
-              original_instance = context.original_instance(instance_location)
+              original_instance = caller_instance(instance, instance_location, context)
               root.before_property_validation.each do |hook|
                 parsed.each do |property, subschema|
                   hook.call(original_instance, property, subschema.value, schema.value)
                 end
               end
-              instance.replace(deep_stringify_keys(original_instance))
+              sync_instance(instance, original_instance, context)
             end
 
             evaluated_keys = []
@@ -365,13 +365,13 @@ module JSONSchemer
             end
 
             if root.after_property_validation.any?
-              original_instance = context.original_instance(instance_location)
+              original_instance = caller_instance(instance, instance_location, context)
               root.after_property_validation.each do |hook|
                 parsed.each do |property, subschema|
                   hook.call(original_instance, property, subschema.value, schema.value)
                 end
               end
-              instance.replace(deep_stringify_keys(original_instance))
+              sync_instance(instance, original_instance, context)
             end
 
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)

@@ -756,6 +756,68 @@ class HooksTest < Minitest::Test
     assert_equal(Date.new(2020, 9, 3), data['start_date'])
   end
 
+  def test_stringified_keys_hooks_receive_caller_data
+    seen = []
+    hook = proc { |data, property, _property_schema, _parent| seen << data if property == 'a' }
+    schema = JSONSchemer.schema(
+      { 'properties' => { 'nested' => { 'properties' => { 'a' => { 'type' => 'integer' } } } } },
+      before_property_validation: [hook],
+      after_property_validation: [hook],
+      stringified_keys: true
+    )
+
+    nested = { 'a' => 1 }
+    data = { 'nested' => nested }
+    assert(schema.valid?(data))
+    assert_equal(2, seen.size)
+    seen.each { |hook_data| assert_same(nested, hook_data) }
+    assert_same(nested, data.fetch('nested'))
+  end
+
+  def test_stringified_keys_hook_changes_are_validated
+    to_integer = proc do |data, property, property_schema, _parent|
+      data[property] = Integer(data[property]) if data[property].is_a?(String) && property_schema['type'] == 'integer'
+    end
+    schema = JSONSchemer.schema(
+      { 'properties' => { 'a' => { 'type' => 'integer' } } },
+      before_property_validation: [to_integer],
+      stringified_keys: true
+    )
+
+    data = { 'a' => '1' }
+    assert(schema.valid?(data))
+    assert_equal({ 'a' => 1 }, data)
+  end
+
+  def test_stringified_keys_after_property_validation_hook_does_not_corrupt_instance_across_oneOf_subschemas
+    convert_date = proc do |data, property, property_schema, _|
+      if data.key?(property) && property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+        data[property] = Date.iso8601(data[property])
+      end
+    end
+
+    schema = {
+      'oneOf' => [
+        {
+          'required' => ['required_field'],
+          'properties' => {
+            'start_date' => { 'type' => 'string', 'format' => 'date' },
+            'required_field' => { 'type' => 'string' }
+          }
+        },
+        {
+          'properties' => {
+            'start_date' => { 'type' => 'string' }
+          }
+        }
+      ]
+    }
+
+    data = { 'start_date' => '2020-09-03' }
+    assert(JSONSchemer.schema(schema, after_property_validation: [convert_date], stringified_keys: true).valid?(data))
+    assert_equal('2020-09-03', data['start_date'])
+  end
+
   def test_insert_property_defaults_compare_by_identity
     data = JSON.parse(%q({
       "fieldname": [
