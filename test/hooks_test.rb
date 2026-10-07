@@ -818,6 +818,146 @@ class HooksTest < Minitest::Test
     assert_equal('2020-09-03', data['start_date'])
   end
 
+  CONVERT_DATE = proc do |data, property, property_schema, _parent|
+    if data[property].is_a?(String) && property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+      data[property] = Date.iso8601(data[property])
+    end
+  end
+
+  SET_DEFAULT = proc do |data, property, property_schema, _parent|
+    data[property] = property_schema['default'] if !data.key?(property) && property_schema.is_a?(Hash) && property_schema.key?('default')
+  end
+
+  def assert_isolated(schema, data, expected_valid, expected_data, **options)
+    [false, true].each do |stringified_keys|
+      instance = Marshal.load(Marshal.dump(data))
+      schemer = JSONSchemer.schema(schema, stringified_keys: stringified_keys, **options)
+      assert_equal(expected_valid, schemer.valid?(instance), "valid? (stringified_keys: #{stringified_keys})")
+      assert_equal(expected_data, instance, "data (stringified_keys: #{stringified_keys})")
+      instance = Marshal.load(Marshal.dump(data))
+      assert_equal(expected_valid, schemer.validate(instance, output_format: 'basic').fetch('valid'), "validate (stringified_keys: #{stringified_keys})")
+      assert_equal(expected_data, instance, "validate data (stringified_keys: #{stringified_keys})")
+    end
+  end
+
+  def test_oneOf_subschemas_do_not_see_changes_from_other_subschemas
+    schema = {
+      'oneOf' => [
+        { 'properties' => { 'start_date' => { 'type' => 'string', 'format' => 'date' } } },
+        { 'properties' => { 'start_date' => { 'type' => 'string' } } }
+      ]
+    }
+    assert_isolated(schema, { 'start_date' => '2020-09-03' }, false, { 'start_date' => '2020-09-03' }, after_property_validation: [CONVERT_DATE])
+  end
+
+  def test_anyOf_keeps_changes_from_first_valid_subschema
+    schema = {
+      'anyOf' => [
+        { 'required' => ['missing'], 'properties' => { 'a' => { 'default' => 'first' } } },
+        { 'properties' => { 'a' => { 'default' => 'second' }, 'start_date' => { 'format' => 'date' } } },
+        { 'properties' => { 'a' => { 'default' => 'third' } } }
+      ]
+    }
+    assert_isolated(
+      schema,
+      { 'start_date' => '2020-09-03' },
+      true,
+      { 'a' => 'second', 'start_date' => Date.new(2020, 9, 3) },
+      before_property_validation: [SET_DEFAULT],
+      after_property_validation: [CONVERT_DATE]
+    )
+  end
+
+  def test_oneOf_discards_all_changes_when_invalid
+    schema = {
+      'oneOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 } } },
+        { 'properties' => { 'b' => { 'default' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, {}, false, {}, before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_not_discards_changes
+    schema = { 'not' => { 'properties' => { 'a' => { 'default' => 1 } }, 'required' => ['missing'] } }
+    assert_isolated(schema, {}, true, {}, before_property_validation: [SET_DEFAULT])
+
+    schema = { 'not' => { 'properties' => { 'a' => { 'default' => 1 } } } }
+    assert_isolated(schema, {}, false, {}, before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_if_keeps_changes_only_when_matching
+    schema = {
+      'if' => { 'properties' => { 'a' => { 'default' => 1 } }, 'required' => ['b'] },
+      'then' => { 'properties' => { 'c' => { 'default' => 3 } } },
+      'else' => { 'properties' => { 'd' => { 'default' => 4 } } }
+    }
+    assert_isolated(schema, {}, true, { 'd' => 4 }, before_property_validation: [SET_DEFAULT])
+    assert_isolated(schema, { 'b' => 2 }, true, { 'a' => 1, 'b' => 2, 'c' => 3 }, before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_contains_keeps_changes_only_for_matching_items
+    schema = { 'contains' => { 'properties' => { 'a' => { 'default' => 1 } }, 'required' => ['b'] } }
+    assert_isolated(schema, [{}, { 'b' => 2 }], true, [{}, { 'a' => 1, 'b' => 2 }], before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_nested_changes_are_discarded_with_failed_subschema
+    schema = {
+      'anyOf' => [
+        {
+          'properties' => {
+            'nested' => {
+              'allOf' => [
+                { 'properties' => { 'a' => { 'default' => 1 } } },
+                { 'anyOf' => [{ 'properties' => { 'b' => { 'default' => 2 } } }] }
+              ]
+            },
+            'start_date' => { 'format' => 'date' }
+          },
+          'required' => ['missing']
+        },
+        { 'properties' => { 'nested' => { 'properties' => { 'c' => { 'default' => 3 } } } } }
+      ]
+    }
+    assert_isolated(
+      schema,
+      { 'nested' => {}, 'start_date' => '2020-09-03' },
+      true,
+      { 'nested' => { 'c' => 3 }, 'start_date' => '2020-09-03' },
+      before_property_validation: [SET_DEFAULT],
+      after_property_validation: [CONVERT_DATE]
+    )
+  end
+
+  def test_kept_nested_changes_are_discarded_with_failed_outer_subschema
+    schema = {
+      'anyOf' => [
+        {
+          'oneOf' => [{ 'properties' => { 'nested' => { 'properties' => { 'a' => { 'default' => 1 } } } } }],
+          'required' => ['missing']
+        },
+        { 'properties' => { 'b' => { 'default' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, { 'nested' => {} }, true, { 'nested' => {}, 'b' => 2 }, before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_isolation_with_symbol_keys
+    schema = {
+      'properties' => {
+        'item' => {
+          'oneOf' => [
+            { 'properties' => { 'start_date' => { 'format' => 'date' } }, 'required' => ['missing'] },
+            { 'properties' => { 'start_date' => { 'type' => 'string' } } }
+          ]
+        }
+      }
+    }
+    data = { :item => { :start_date => '2020-09-03' } }
+    assert(JSONSchemer.schema(schema, after_property_validation: [CONVERT_DATE]).valid?(data))
+    assert_equal({ :item => { :start_date => '2020-09-03' } }, data)
+  end
+
   def test_insert_property_defaults_compare_by_identity
     data = JSON.parse(%q({
       "fieldname": [

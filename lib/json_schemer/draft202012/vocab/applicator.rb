@@ -43,26 +43,15 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
-              (root.before_property_validation.any? || root.after_property_validation.any?)
-
+            kept_changes = nil
             nested = parsed.map.with_index do |subschema, index|
-              if needs_isolation
-                original = caller_instance(instance, instance_location, context)
-                original_backup = deep_dup_instance(original)
-
-                subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
-
-                unless subschema_result.valid
-                  original.replace(original_backup)
-                  sync_instance(instance, original, context)
-                end
-
-                subschema_result
-              else
+              subschema_result, changes = context.isolate(instance) do
                 subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
               end
+              kept_changes ||= changes if subschema_result.valid
+              subschema_result
             end
+            context.apply_changes(kept_changes)
             result(instance, instance_location, keyword_location, nested.any?(&:valid), nested)
           end
 
@@ -90,27 +79,16 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            needs_isolation = (instance.is_a?(Hash) || instance.is_a?(Array)) &&
-              (root.before_property_validation.any? || root.after_property_validation.any?)
-
+            kept_changes = nil
             nested = parsed.map.with_index do |subschema, index|
-              if needs_isolation
-                original = caller_instance(instance, instance_location, context)
-                original_backup = deep_dup_instance(original)
-
-                subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
-
-                unless subschema_result.valid
-                  original.replace(original_backup)
-                  sync_instance(instance, original, context)
-                end
-
-                subschema_result
-              else
+              subschema_result, changes = context.isolate(instance) do
                 subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
               end
+              kept_changes ||= changes if subschema_result.valid
+              subschema_result
             end
             valid_count = nested.count(&:valid)
+            context.apply_changes(kept_changes) if valid_count == 1
             result(instance, instance_location, keyword_location, valid_count == 1, nested, :ignore_nested => valid_count > 1)
           end
 
@@ -136,7 +114,9 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
+            subschema_result, _changes = context.isolate(instance) do
+              parsed.validate_instance(instance, instance_location, keyword_location, context)
+            end
             result(instance, instance_location, keyword_location, !subschema_result.valid, subschema_result.nested)
           end
 
@@ -152,7 +132,10 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            subschema_result = parsed.validate_instance(instance, instance_location, keyword_location, context)
+            subschema_result, changes = context.isolate(instance) do
+              parsed.validate_instance(instance, instance_location, keyword_location, context)
+            end
+            context.apply_changes(changes) if subschema_result.valid
             result(instance, instance_location, keyword_location, true, subschema_result.nested, :annotation => subschema_result.valid)
           end
 
@@ -318,7 +301,10 @@ module JSONSchemer
             nested = []
             annotation = []
             instance.each_with_index do |item, index|
-              nested_result = parsed.validate_instance(item, join_location(instance_location, index.to_s), keyword_location, context)
+              nested_result, changes = context.isolate(item) do
+                parsed.validate_instance(item, join_location(instance_location, index.to_s), keyword_location, context)
+              end
+              context.apply_changes(changes) if nested_result.valid
               nested << nested_result
               annotation << index if nested_result.valid
             end
@@ -346,6 +332,8 @@ module JSONSchemer
 
             if root.before_property_validation.any?
               original_instance = caller_instance(instance, instance_location, context)
+              context.record_change(original_instance)
+              context.record_change(instance)
               root.before_property_validation.each do |hook|
                 parsed.each do |property, subschema|
                   hook.call(original_instance, property, subschema.value, schema.value)
@@ -366,6 +354,8 @@ module JSONSchemer
 
             if root.after_property_validation.any?
               original_instance = caller_instance(instance, instance_location, context)
+              context.record_change(original_instance)
+              context.record_change(instance)
               root.after_property_validation.each do |hook|
                 parsed.each do |property, subschema|
                   hook.call(original_instance, property, subschema.value, schema.value)
