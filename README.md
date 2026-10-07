@@ -255,7 +255,16 @@ JSONSchemer.schema(
 
 ## Property Hooks
 
-`before_property_validation` and `after_property_validation` hooks are called with the object being validated (`data`), a property name, the property's schema and the parent schema, for every property listed in a schema's `properties`, whether or not it is present in `data`. Hooks are called in the order given, each for all properties.
+`before_property_validation` and `after_property_validation` hooks are called for every property listed in a schema's `properties`, whether or not it is present in the data, with:
+
+1. `data`: the object being validated
+2. `property`: the property name
+3. `property_schema`: the property's schema (as given, references not resolved)
+4. `parent_schema`: the schema containing `properties`
+5. `instance_location`: JSON pointer of `data` in the validated instance (eg `/items/3`)
+6. `subschema`: the property's `JSONSchemer::Schema`, eg to resolve references (`subschema.parsed['$ref'].ref_schema`) or get its location (`subschema.schema_pointer`)
+
+Hooks are called in the order given, each for all properties. Procs can ignore trailing arguments, but lambdas and methods must accept all six.
 
 - `before_property_validation` hooks run when validation of a schema with `properties` starts, before any of its keywords, so `required`, `oneOf`, `if`, `dependentRequired`, etc. all see the changes.
 - `after_property_validation` hooks run once the whole instance is validated, so no keyword sees their changes (eg converting a `format: date` string to a `Date` doesn't fail a `type: string` in `patternProperties`, another `allOf` subschema or a parent's `enum`). They're called in validation order: nested objects before their parents.
@@ -289,7 +298,7 @@ data
 # => {"price"=>10, "quantity"=>1, "total"=>10}
 ```
 
-Like `insert_property_defaults`, it looks up defaults behind `$ref`, `$dynamicRef` and `$recursiveRef` (when passed directly in `before_property_validation`; called from another hook, it only uses `default` in the given property schema). The two differ when subschemas define different defaults for the same property: `insert_property_defaults` skips conflicting defaults, while the hook inserts the first one that applies (in keyword evaluation order) and later subschemas validate it.
+Like `insert_property_defaults`, it looks up defaults behind `$ref`, `$dynamicRef` and `$recursiveRef` (using the `subschema` argument; called from another hook with only four arguments, it uses `default` in the given property schema). The two differ when subschemas define different defaults for the same property: `insert_property_defaults` skips conflicting defaults, while the hook inserts the first one that applies (in keyword evaluation order) and later subschemas validate it.
 
 ## Global Configuration
 

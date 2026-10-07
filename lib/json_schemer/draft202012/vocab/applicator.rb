@@ -332,24 +332,8 @@ module JSONSchemer
             original_instance = caller_instance(instance, instance_location, context)
             context.record_change(original_instance)
             context.record_change(instance)
-            root.before_property_validation.each do |hook|
-              if hook.equal?(Schema::INSERT_PROPERTY_DEFAULT)
-                insert_defaults(original_instance)
-              else
-                parsed.each do |property, subschema|
-                  hook.call(original_instance, property, subschema.value, schema.value)
-                end
-              end
-            end
+            call_hooks(root.before_property_validation, original_instance, instance_location)
             sync_instance(instance, original_instance, context)
-          end
-
-          def insert_defaults(data)
-            parsed.each do |property, subschema|
-              next if data.key?(property) || data.key?(property.to_sym)
-              next unless default = subschema.default_keyword_instance
-              data[property] = Schema::DEEP_COPY_DEFAULT.call(default.value)
-            end
           end
 
           def validate(instance, instance_location, keyword_location, context)
@@ -368,15 +352,20 @@ module JSONSchemer
             if root.after_property_validation.any?
               original_instance = caller_instance(instance, instance_location, context)
               context.defer do
-                root.after_property_validation.each do |hook|
-                  parsed.each do |property, subschema|
-                    hook.call(original_instance, property, subschema.value, schema.value)
-                  end
-                end
+                call_hooks(root.after_property_validation, original_instance, instance_location)
               end
             end
 
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)
+          end
+
+          def call_hooks(hooks, data, instance_location)
+            resolved_instance_location = Location.resolve(instance_location)
+            hooks.each do |hook|
+              parsed.each do |property, subschema|
+                hook.call(data, property, subschema.value, schema.value, resolved_instance_location, subschema)
+              end
+            end
           end
 
           def valid_instance?(instance, context)

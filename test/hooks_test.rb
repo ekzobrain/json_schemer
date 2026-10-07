@@ -556,6 +556,42 @@ class HooksTest < Minitest::Test
     end
   end
 
+  def test_hooks_receive_instance_location_and_subschema
+    calls = []
+    hook = proc do |data, property, property_schema, parent_schema, instance_location, subschema|
+      calls << [property, instance_location, subschema.schema_pointer, subschema.value.equal?(property_schema), parent_schema.key?('properties'), data.key?(property)]
+    end
+    schemer = JSONSchemer.schema(
+      {
+        'properties' => { 'items' => { 'type' => 'array', 'items' => { '$ref' => '#/$defs/item' } } },
+        '$defs' => { 'item' => { 'properties' => { 'total' => { '$ref' => '#/$defs/total' } } }, 'total' => { 'x-expression' => 'a + b' } }
+      },
+      before_property_validation: [hook],
+      after_property_validation: [hook]
+    )
+
+    assert(schemer.valid?({ 'items' => [{ 'total' => 1 }, {}] }))
+    assert_equal(
+      [
+        ['items', '', '/properties/items', true, true, true],
+        ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
+        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
+        ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
+        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
+        ['items', '', '/properties/items', true, true, true]
+      ],
+      calls
+    )
+
+    # the subschema resolves references, eg to find an expression behind `$ref`
+    expressions = []
+    collect = proc do |_data, _property, _property_schema, _parent_schema, _instance_location, subschema|
+      expressions << subschema.parsed['$ref']&.ref_schema&.value&.fetch('x-expression')
+    end
+    JSONSchemer.schema(schemer.value, before_property_validation: [collect]).valid?({ 'items' => [{}] })
+    assert_equal([nil, 'a + b'], expressions)
+  end
+
   def test_before_property_validation_runs_once
     calls = Hash.new(0)
     counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }

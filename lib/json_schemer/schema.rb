@@ -113,14 +113,18 @@ module JSONSchemer
     # `before_property_validation` hook that inserts `default` values of missing properties. Unlike
     # `insert_property_defaults`, defaults are inserted before the schema is validated (so `required`, `oneOf`, etc.
     # see them) and without a second validation pass. Defaults inserted in subschemas that turn out not to apply
-    # (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back.
-    # When passed in `before_property_validation` itself, defaults are also looked up behind `$ref`, `$dynamicRef` and
-    # `$recursiveRef` like `insert_property_defaults` does (see `Properties#before_property_validation`). Called
-    # directly, it only uses `default` in the given property schema.
-    INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent|
-      next unless property_schema.is_a?(Hash) && property_schema.key?('default')
+    # (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back. Defaults behind `$ref`, `$dynamicRef` and `$recursiveRef`
+    # are found using the property subschema (6th argument); without it, only `default` in the property schema is used.
+    INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent, _instance_location, subschema|
       next if data.key?(property) || data.key?(property.to_sym)
-      data[property] = DEEP_COPY_DEFAULT.call(property_schema.fetch('default'))
+      if subschema
+        next unless default = subschema.default_keyword_instance
+        default = default.value
+      else
+        next unless property_schema.is_a?(Hash) && property_schema.key?('default')
+        default = property_schema.fetch('default')
+      end
+      data[property] = DEEP_COPY_DEFAULT.call(default)
     end
 
     attr_accessor :base_uri, :meta_schema, :keywords, :keyword_order
