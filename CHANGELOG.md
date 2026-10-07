@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.5.0] - 2025-12-08
+
+### Bug Fixes
+
+- Apply `discriminator` before unevaluated keywords: https://github.com/davishmcclurg/json_schemer/pull/220
+- Disallow trailing dots in hostname formats: https://github.com/davishmcclurg/json_schemer/pull/226
+- Limit overall size in hostname formats: https://github.com/davishmcclurg/json_schemer/pull/226
+- Support extended set of separators in hostname formats: https://github.com/davishmcclurg/json_schemer/pull/226
+
+### Features
+
+- More interpolation variables for custom error messages: https://github.com/davishmcclurg/json_schemer/pull/211
+
+[2.5.0]: https://github.com/davishmcclurg/json_schemer/releases/tag/v2.5.0
+
 ## [2.4.0] - 2025-02-01
 
 ### Bug Fixes

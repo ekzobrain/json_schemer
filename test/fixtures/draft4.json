@@ -56,9 +56,6 @@
       []
     ],
     [
-      []
-    ],
-    [
       [
         {
           "data": "hello",
@@ -2999,6 +2996,52 @@
           "type": "enum"
         }
       ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "µ",
+          "data_pointer": "",
+          "schema": {
+            "enum": [
+              "μ"
+            ],
+            "$comment": "U+03BC"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "enum": [
+              "μ"
+            ],
+            "$comment": "U+03BC"
+          },
+          "type": "enum"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "ä",
+          "data_pointer": "",
+          "schema": {
+            "enum": [
+              "ä"
+            ],
+            "$comment": "U+00E4"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "enum": [
+              "ä"
+            ],
+            "$comment": "U+00E4"
+          },
+          "type": "enum"
+        }
+      ]
     ]
   ],
   "JSON-Schema-Test-Suite/tests/draft4/format.json": [
@@ -5841,6 +5884,20 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "+11963-06-19T08:30:06.283185Z",
+          "data_pointer": "",
+          "schema": {
+            "format": "date-time"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "date-time"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -6101,6 +6158,48 @@
       [
         {
           "data": ".",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": ".example",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example.",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example．com",
           "data_pointer": "",
           "schema": {
             "format": "hostname"
@@ -6700,6 +6799,146 @@
       [
         {
           "data": "bar,baz:foo",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://[@example.org/test.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar®.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\\.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\".txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar<>.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar{}.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar^.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar`.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foo bar.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar|.txt",
           "data_pointer": "",
           "schema": {
             "format": "uri"

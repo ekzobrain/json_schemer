@@ -95,9 +95,6 @@
       []
     ],
     [
-      []
-    ],
-    [
       [
         {
           "data": "hello",
@@ -2160,6 +2157,44 @@
           "schema_pointer": "",
           "root_schema": {
             "const": "hello\u0000there"
+          },
+          "type": "const"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "µ",
+          "data_pointer": "",
+          "schema": {
+            "const": "μ",
+            "$comment": "U+03BC"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "const": "μ",
+            "$comment": "U+03BC"
+          },
+          "type": "const"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "ä",
+          "data_pointer": "",
+          "schema": {
+            "const": "ä",
+            "$comment": "U+00E4"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "const": "ä",
+            "$comment": "U+00E4"
           },
           "type": "const"
         }
@@ -7782,6 +7817,20 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "+11963-06-19T08:30:06.283185Z",
+          "data_pointer": "",
+          "schema": {
+            "format": "date-time"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "date-time"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -8171,6 +8220,20 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "2020-11-28T23:55:45Z",
+          "data_pointer": "",
+          "schema": {
+            "format": "date"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "date"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -8283,134 +8346,6 @@
       [],
       [],
       [],
-      [
-        {
-          "data": "-a-host-name-that-starts-with--",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "not_a_valid_host_name",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "a-vvvvvvvvvvvvvvvveeeeeeeeeeeeeeeerrrrrrrrrrrrrrrryyyyyyyyyyyyyyyy-long-host-name-component",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "-hostname",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "hostname-",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "_hostname",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "hostname_",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "host_name",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [],
-      [
-        {
-          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl.com",
-          "data_pointer": "",
-          "schema": {
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [],
       [],
       [],
       [],
@@ -8441,7 +8376,460 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": ".example",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example.",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example．com",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "-hostname",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "hostname-",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "XN--aa---o47jg78q",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "host_name",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.com",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl.com",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
       ]
+    ],
+    [
+      [
+        {
+          "data": "xn--X",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--07jt112bpxg.xn--9t4b11yi5a",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-txk",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-zed",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-6bf",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [
+        {
+          "data": "xn--chb89f",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--07jceefgh4c",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--al-0ea",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--l-fda",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--la-0ea",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--l-gda",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--S-jib3p",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--wva3j",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--A-2hc5h",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--5db1e",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--A-2hc8h",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--5db3e",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--defabc-k64e",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--vek",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [],
+      [
+        {
+          "data": "xn--ngb6iyr",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [
+        {
+          "data": "xn--11b2er09f",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--02b508i",
+          "data_pointer": "",
+          "schema": {
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      []
     ]
   ],
   "JSON-Schema-Test-Suite/tests/draft7/optional/format/idn-email.json": [
@@ -8979,6 +9367,122 @@
       [
         {
           "data": "｡",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "data": ".example",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "。example",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "．example",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "｡example",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example.",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example。",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example．",
+          "data_pointer": "",
+          "schema": {
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example｡",
           "data_pointer": "",
           "schema": {
             "format": "idn-hostname"
@@ -10310,6 +10814,20 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "2020-11-28T23:55:45Z",
+          "data_pointer": "",
+          "schema": {
+            "format": "time"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "time"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -10354,6 +10872,34 @@
       [
         {
           "data": "#frag\\ment",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri-reference"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri-reference"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "/foobar®.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri-reference"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri-reference"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\\.txt",
           "data_pointer": "",
           "schema": {
             "format": "uri-reference"
@@ -10502,6 +11048,146 @@
       [
         {
           "data": "bar,baz:foo",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://[@example.org/test.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar®.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\\.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\".txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar<>.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar{}.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar^.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar`.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foo bar.txt",
+          "data_pointer": "",
+          "schema": {
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar|.txt",
           "data_pointer": "",
           "schema": {
             "format": "uri"

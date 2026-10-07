@@ -99,9 +99,6 @@
       []
     ],
     [
-      []
-    ],
-    [
       [
         {
           "data": "hello",
@@ -2490,6 +2487,48 @@
           "root_schema": {
             "$schema": "https://json-schema.org/draft/2019-09/schema",
             "const": "hello\u0000there"
+          },
+          "type": "const"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "µ",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "const": "μ",
+            "$comment": "U+03BC"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "const": "μ",
+            "$comment": "U+03BC"
+          },
+          "type": "const"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": "ä",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "const": "ä",
+            "$comment": "U+00E4"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "const": "ä",
+            "$comment": "U+00E4"
           },
           "type": "const"
         }
@@ -9689,6 +9728,22 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "+11963-06-19T08:30:06.283185Z",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "date-time"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "date-time"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -10130,6 +10185,22 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "2020-11-28T23:55:45Z",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "date"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "date"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -10449,153 +10520,6 @@
       [],
       [],
       [],
-      [
-        {
-          "data": "-a-host-name-that-starts-with--",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "not_a_valid_host_name",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "a-vvvvvvvvvvvvvvvveeeeeeeeeeeeeeeerrrrrrrrrrrrrrrryyyyyyyyyyyyyyyy-long-host-name-component",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "-hostname",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "hostname-",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "_hostname",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "hostname_",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [
-        {
-          "data": "host_name",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [],
-      [
-        {
-          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl.com",
-          "data_pointer": "",
-          "schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "schema_pointer": "",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "format": "hostname"
-          },
-          "type": "format"
-        }
-      ],
-      [],
-      [],
       [],
       [],
       [],
@@ -10630,7 +10554,522 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": ".example",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example.",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example．com",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "-hostname",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "hostname-",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "XN--aa---o47jg78q",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "host_name",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.com",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl.com",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
       ]
+    ],
+    [
+      [
+        {
+          "data": "xn--X",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--07jt112bpxg.xn--9t4b11yi5a",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-txk",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-zed",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--hello-6bf",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [
+        {
+          "data": "xn--chb89f",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--07jceefgh4c",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--al-0ea",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--l-fda",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--la-0ea",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--l-gda",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--S-jib3p",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--wva3j",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--A-2hc5h",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--5db1e",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--A-2hc8h",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--5db3e",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [
+        {
+          "data": "xn--defabc-k64e",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--vek",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [],
+      [
+        {
+          "data": "xn--ngb6iyr",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [
+        {
+          "data": "xn--11b2er09f",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "xn--02b508i",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      []
     ]
   ],
   "JSON-Schema-Test-Suite/tests/draft2019-09/optional/format/idn-email.json": [
@@ -11239,6 +11678,138 @@
       [
         {
           "data": "｡",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [],
+      [],
+      [],
+      [],
+      [
+        {
+          "data": ".example",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "。example",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "．example",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "｡example",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example.",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example。",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example．",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "idn-hostname"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "example｡",
           "data_pointer": "",
           "schema": {
             "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -12740,6 +13311,22 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "2020-11-28T23:55:45Z",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "time"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "time"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -12786,6 +13373,38 @@
       [
         {
           "data": "#frag\\ment",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri-reference"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri-reference"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "/foobar®.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri-reference"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri-reference"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\\.txt",
           "data_pointer": "",
           "schema": {
             "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -12962,6 +13581,166 @@
           },
           "type": "format"
         }
+      ],
+      [
+        {
+          "data": "https://[@example.org/test.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar®.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\\.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar\".txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar<>.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar{}.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar^.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar`.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foo bar.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "https://example.org/foobar|.txt",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uri"
+          },
+          "type": "format"
+        }
       ]
     ]
   ],
@@ -13076,6 +13855,22 @@
       [
         {
           "data": "2eb8aa08aa9811eab4aa73b441d16380----",
+          "data_pointer": "",
+          "schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uuid"
+          },
+          "schema_pointer": "",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "format": "uuid"
+          },
+          "type": "format"
+        }
+      ],
+      [
+        {
+          "data": "2eb8aa0-8aa98-11e-ab4aa7-3b441d16380",
           "data_pointer": "",
           "schema": {
             "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -13358,6 +14153,31 @@
           "schema": {
             "type": "integer"
           },
+          "schema_pointer": "/unknown~1keyword",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "unknown/keyword": {
+              "type": "integer"
+            },
+            "properties": {
+              "bar": {
+                "$ref": "#/unknown~1keyword"
+              }
+            }
+          },
+          "type": "integer"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": true,
+          "data_pointer": "/bar",
+          "schema": {
+            "type": "integer"
+          },
           "schema_pointer": "/properties/foo/unknown-keyword",
           "root_schema": {
             "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -13397,6 +14217,33 @@
             "$ref": "#/examples/0"
           },
           "type": "string"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
+          "data": true,
+          "data_pointer": "/bar",
+          "schema": {
+            "type": "integer"
+          },
+          "schema_pointer": "/properties/foo/unknown~1keyword",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "properties": {
+              "foo": {
+                "unknown/keyword": {
+                  "type": "integer"
+                }
+              },
+              "bar": {
+                "$ref": "#/properties/foo/unknown~1keyword"
+              }
+            }
+          },
+          "type": "integer"
         }
       ]
     ]
@@ -17426,6 +18273,40 @@
       [],
       [
         {
+          "data": "a",
+          "data_pointer": "",
+          "schema": {
+            "$comment": "canonical uri: https://example.com/draft2019-09/ref-and-id3/nested/bar.json",
+            "$id": "nested/bar.json",
+            "type": "number"
+          },
+          "schema_pointer": "/$defs/bar",
+          "root_schema": {
+            "$comment": "$id must be evaluated before $ref to get the proper $ref destination",
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "$id": "https://example.com/draft2019-09/ref-and-id3/base.json",
+            "$ref": "nested/foo.json",
+            "$defs": {
+              "foo": {
+                "$comment": "canonical uri: https://example.com/draft2019-09/ref-and-id3/nested/foo.json",
+                "$id": "nested/foo.json",
+                "$ref": "./bar.json"
+              },
+              "bar": {
+                "$comment": "canonical uri: https://example.com/draft2019-09/ref-and-id3/nested/bar.json",
+                "$id": "nested/bar.json",
+                "type": "number"
+              }
+            }
+          },
+          "type": "number"
+        }
+      ]
+    ],
+    [
+      [],
+      [
+        {
           "data": 12,
           "data_pointer": "/foo",
           "schema": {
@@ -20207,6 +21088,31 @@
           "type": "schema"
         }
       ]
+    ],
+    [
+      [
+        {
+          "data": "bar",
+          "data_pointer": "/1",
+          "schema": false,
+          "schema_pointer": "/unevaluatedItems",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "items": [
+              {
+                "items": [
+                  true,
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            ],
+            "unevaluatedItems": false
+          },
+          "type": "schema"
+        }
+      ]
     ]
   ],
   "JSON-Schema-Test-Suite/tests/draft2019-09/unevaluatedProperties.json": [
@@ -20649,76 +21555,11 @@
       ]
     ],
     [
+      [],
       [
         {
           "data": "bar",
           "data_pointer": "/bar",
-          "schema": false,
-          "schema_pointer": "/unevaluatedProperties",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "type": "object",
-            "if": {
-              "properties": {
-                "foo": {
-                  "const": "then"
-                }
-              },
-              "required": [
-                "foo"
-              ]
-            },
-            "else": {
-              "properties": {
-                "baz": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "baz"
-              ]
-            },
-            "unevaluatedProperties": false
-          },
-          "type": "schema"
-        }
-      ],
-      [
-        {
-          "data": "bar",
-          "data_pointer": "/bar",
-          "schema": false,
-          "schema_pointer": "/unevaluatedProperties",
-          "root_schema": {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "type": "object",
-            "if": {
-              "properties": {
-                "foo": {
-                  "const": "then"
-                }
-              },
-              "required": [
-                "foo"
-              ]
-            },
-            "else": {
-              "properties": {
-                "baz": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "baz"
-              ]
-            },
-            "unevaluatedProperties": false
-          },
-          "type": "schema"
-        },
-        {
-          "data": "baz",
-          "data_pointer": "/baz",
           "schema": false,
           "schema_pointer": "/unevaluatedProperties",
           "root_schema": {
@@ -25981,6 +26822,30 @@
         }
       ],
       []
+    ],
+    [
+      [
+        {
+          "data": "bar",
+          "data_pointer": "/bar",
+          "schema": false,
+          "schema_pointer": "/unevaluatedProperties",
+          "root_schema": {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "properties": {
+              "foo": {
+                "properties": {
+                  "bar": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "unevaluatedProperties": false
+          },
+          "type": "schema"
+        }
+      ]
     ]
   ],
   "JSON-Schema-Test-Suite/tests/draft2019-09/uniqueItems.json": [
