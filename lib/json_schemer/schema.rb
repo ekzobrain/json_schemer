@@ -82,6 +82,30 @@ module JSONSchemer
       DEFAULT_PROPERTY_DEFAULT_RESOLVER.call(instance, property.to_sym, results_with_tree_validity)
     end
 
+    DEEP_COPY_DEFAULT = proc do |value|
+      case value
+      when Hash
+        value.to_h { |key, item| [key, DEEP_COPY_DEFAULT.call(item)] }
+      when Array
+        value.map { |item| DEEP_COPY_DEFAULT.call(item) }
+      when String
+        value.dup
+      else
+        value
+      end
+    end
+    private_constant :DEEP_COPY_DEFAULT
+
+    # `before_property_validation` hook that inserts `default` values of missing properties. Unlike
+    # `insert_property_defaults`, defaults are inserted before the schema is validated (so `required`, `oneOf`, etc.
+    # see them) and without a second validation pass. Defaults inserted in subschemas that turn out not to apply
+    # (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back.
+    INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent|
+      next unless property_schema.is_a?(Hash) && property_schema.key?('default')
+      next if data.key?(property) || data.key?(property.to_sym)
+      data[property] = DEEP_COPY_DEFAULT.call(property_schema.fetch('default'))
+    end
+
     attr_accessor :base_uri, :meta_schema, :keywords, :keyword_order
     attr_reader :value, :parent, :root, :configuration, :parsed
     def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_property_validation, :after_property_validation, :insert_property_defaults
@@ -182,6 +206,10 @@ module JSONSchemer
       begin
         return result(instance, instance_location, keyword_location, false) if value == false
         return result(instance, instance_location, keyword_location, true) if value == true || value.empty?
+
+        if instance.is_a?(Hash) && root.before_property_validation.any? && (properties = parsed['properties']).is_a?(PROPERTIES_KEYWORD_CLASS)
+          properties.before_property_validation(instance, instance_location, context)
+        end
 
         valid = true
         nested = []

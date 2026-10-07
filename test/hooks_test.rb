@@ -958,6 +958,102 @@ class HooksTest < Minitest::Test
     assert_equal({ :item => { :start_date => '2020-09-03' } }, data)
   end
 
+  def test_before_property_validation_runs_before_other_keywords
+    schema = {
+      'properties' => { 'kind' => { 'default' => 'a' } },
+      'oneOf' => [
+        { 'properties' => { 'kind' => { 'const' => 'a' } }, 'required' => ['kind'] },
+        { 'properties' => { 'kind' => { 'const' => 'b' } }, 'required' => ['kind'] }
+      ],
+      'if' => { 'required' => ['kind'] },
+      'then' => { 'properties' => { 'checked' => { 'default' => true } } }
+    }
+    assert_isolated(schema, {}, true, { 'kind' => 'a', 'checked' => true }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'checked' => true }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+  end
+
+  def test_before_property_validation_runs_once
+    calls = Hash.new(0)
+    counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }
+    schema = { 'properties' => { 'a' => { 'default' => 1 }, 'b' => { 'type' => 'integer' } }, 'required' => ['a'] }
+
+    data = {}
+    assert(JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, counter]).valid?(data))
+    assert_equal({ 'a' => 1 }, data)
+    assert_equal({ 'a' => 1, 'b' => 1 }, calls)
+  end
+
+  def test_insert_property_default_hook
+    default = { 'nested' => { 'list' => ['x'] } }
+    schema = {
+      'properties' => {
+        'a' => { 'type' => 'object', 'default' => default },
+        'b' => { 'default' => 'b' },
+        'c' => { 'default' => nil },
+        'd' => { 'default' => 'd' },
+        'e' => true
+      },
+      'required' => ['a', 'b', 'c', 'd']
+    }
+
+    data = { 'd' => 'existing' }
+    assert(JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?(data))
+    assert_equal({ 'a' => default, 'b' => 'b', 'c' => nil, 'd' => 'existing' }, data)
+
+    data.fetch('a').fetch('nested').fetch('list') << 'y'
+    data.fetch('b') << 'b'
+    assert_equal({ 'nested' => { 'list' => ['x'] } }, default)
+    assert_equal('b', schema.dig('properties', 'b', 'default'))
+
+    data = { :b => 'existing' }
+    assert(JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?(data))
+    refute(data.key?('b'))
+    assert_equal('existing', data.fetch(:b))
+  end
+
+  def test_insert_property_default_hook_with_computed_values
+    compute = proc do |data, property, property_schema, _parent|
+      if property_schema.is_a?(Hash) && property_schema.key?('x-sum')
+        data[property] = property_schema.fetch('x-sum').sum { |other| data.fetch(other) }
+      end
+    end
+    schema = {
+      'properties' => {
+        'a' => { 'type' => 'integer' },
+        'b' => { 'type' => 'integer', 'default' => 2 },
+        'total' => { 'type' => 'integer', 'maximum' => 10, 'x-sum' => ['a', 'b'] }
+      },
+      'required' => ['a', 'total']
+    }
+
+    assert_isolated(schema, { 'a' => 1 }, true, { 'a' => 1, 'b' => 2, 'total' => 3 }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, compute])
+    assert_isolated(schema, { 'a' => 1, 'b' => 20 }, false, { 'a' => 1, 'b' => 20, 'total' => 21 }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, compute])
+  end
+
+  def test_insert_property_default_hook_skips_failed_subschemas
+    schema = {
+      'type' => 'object',
+      'properties' => {
+        'list' => {
+          'type' => 'array',
+          'items' => {
+            'oneOf' => [
+              { 'properties' => { 'kind' => { 'const' => 'a' }, 'a' => { 'default' => 1 } }, 'required' => ['kind'] },
+              { 'properties' => { 'kind' => { 'const' => 'b' }, 'b' => { 'default' => 2 } }, 'required' => ['kind'] }
+            ]
+          }
+        }
+      }
+    }
+    assert_isolated(
+      schema,
+      { 'list' => [{ 'kind' => 'a' }, { 'kind' => 'b' }] },
+      true,
+      { 'list' => [{ 'kind' => 'a', 'a' => 1 }, { 'kind' => 'b', 'b' => 2 }] },
+      before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]
+    )
+  end
+
   def test_insert_property_defaults_compare_by_identity
     data = JSON.parse(%q({
       "fieldname": [

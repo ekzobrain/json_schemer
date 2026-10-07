@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Property hook changes made while trying `anyOf`, `oneOf`, `not`, `if` and `contains` subschemas no longer leak into other subschemas or remain after failed ones.
+
+### Features
+
+- `stringified_keys` option to skip key conversion for string-keyed schemas and data (davishmcclurg/json_schemer#236), and allocation optimizations (davishmcclurg/json_schemer#235).
+- `before_property_validation` hooks run before all keywords of a schema with `properties`, so `required`, `oneOf`, `if`, etc. see their changes.
+- `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` hook to insert defaults in a single validation pass.
+
 ## [2.5.0] - 2025-12-08
 
 ### Bug Fixes

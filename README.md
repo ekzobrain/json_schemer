@@ -205,14 +205,15 @@ JSONSchemer.schema(
   # default: false
   insert_property_defaults: true,
 
-  # modify properties during validation. You can pass one Proc or a list of Procs to modify data.
+  # modify properties before an object is validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
+  # `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` inserts `default` values in a single validation pass
   # Proc/[Proc]
   # default: nil
   before_property_validation: proc do |data, property, property_schema, _parent|
     data[property] ||= 42
   end,
 
-  # modify properties after validation. You can pass one Proc or a list of Procs to modify data.
+  # modify properties after their values are validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
   # Proc/[Proc]
   # default: nil
   after_property_validation: proc do |data, property, property_schema, _parent|
@@ -224,6 +225,13 @@ JSONSchemer.schema(
   # 'net/http': proc { |uri| JSON.parse(Net::HTTP.get(uri)) }
   # default: proc { |uri| raise UnknownRef, uri.to_s }
   ref_resolver: 'net/http',
+
+  # skip converting schema and instance keys to strings (keys must already be strings)
+  # avoids copying data and lets property hooks modify the instance directly
+  # can be overridden per call: `schemer.valid?(data, stringified_keys: true)`
+  # true/false
+  # default: false
+  stringified_keys: true,
 
   # use different method to match regexes
   # 'ruby'/'ecma'/proc/lambda/respond_to?(:call)
@@ -244,6 +252,44 @@ JSONSchemer.schema(
   access_mode: 'read'
 )
 ```
+
+## Property Hooks
+
+`before_property_validation` and `after_property_validation` hooks are called with the object being validated (`data`), a property name, the property's schema and the parent schema, for every property listed in a schema's `properties`, whether or not it is present in `data`. Hooks are called in the order given, each for all properties.
+
+- `before_property_validation` hooks run when validation of a schema with `properties` starts, before any of its keywords, so `required`, `oneOf`, `if`, `dependentRequired`, etc. all see the changes.
+- `after_property_validation` hooks run in `properties`, after the property values are validated.
+
+Hooks that are run while trying subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` change data in a transaction: every subschema sees the same data, and changes are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, hooks must only assign properties of the `data` they're given (`data[property] = value`) rather than modify nested objects in place.
+
+`JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` is a `before_property_validation` hook that inserts `default` values of missing properties (deep copied). Unlike `insert_property_defaults`, it inserts defaults before validation instead of re-validating the instance afterwards, so hooks run only once. Combined with a hook that computes values, defaults are available to the computation:
+
+```ruby
+compute = proc do |data, property, property_schema, _parent|
+  data[property] = data.fetch('price') * data.fetch('quantity') if property_schema.is_a?(Hash) && property_schema['x-computed'] == 'total'
+end
+
+schemer = JSONSchemer.schema(
+  {
+    'type' => 'object',
+    'properties' => {
+      'price' => { 'type' => 'number' },
+      'quantity' => { 'type' => 'integer', 'default' => 1 },
+      'total' => { 'type' => 'number', 'maximum' => 100, 'x-computed' => 'total' }
+    },
+    'required' => ['price', 'total']
+  },
+  before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, compute]
+)
+
+data = { 'price' => 10 }
+schemer.valid?(data)
+# => true
+data
+# => {"price"=>10, "quantity"=>1, "total"=>10}
+```
+
+`INSERT_PROPERTY_DEFAULT` only uses `default` defined directly in a property schema (not behind `$ref`).
 
 ## Global Configuration
 

@@ -327,20 +327,21 @@ module JSONSchemer
             end
           end
 
+          # Called by the schema before any of its keywords are validated, so that every keyword sees the changes.
+          def before_property_validation(instance, instance_location, context)
+            original_instance = caller_instance(instance, instance_location, context)
+            context.record_change(original_instance)
+            context.record_change(instance)
+            root.before_property_validation.each do |hook|
+              parsed.each do |property, subschema|
+                hook.call(original_instance, property, subschema.value, schema.value)
+              end
+            end
+            sync_instance(instance, original_instance, context)
+          end
+
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
-
-            if root.before_property_validation.any?
-              original_instance = caller_instance(instance, instance_location, context)
-              context.record_change(original_instance)
-              context.record_change(instance)
-              root.before_property_validation.each do |hook|
-                parsed.each do |property, subschema|
-                  hook.call(original_instance, property, subschema.value, schema.value)
-                end
-              end
-              sync_instance(instance, original_instance, context)
-            end
 
             evaluated_keys = []
             nested = []
