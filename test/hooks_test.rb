@@ -494,6 +494,28 @@ class HooksTest < Minitest::Test
     assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'checked' => true }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
   end
 
+  def test_before_property_validation_values_are_seen_by_conditionals
+    schema = {
+      'properties' => { 'kind' => { 'enum' => ['person', 'company'], 'default' => 'person' }, 'name' => {}, 'inn' => {} },
+      'if' => { 'properties' => { 'kind' => { 'const' => 'company' } } },
+      'then' => { 'required' => ['inn'] },
+      'else' => { 'required' => ['name'] }
+    }
+    # `if` must see the inserted default, otherwise it passes because `kind` is missing and `then` is applied
+    assert_isolated(schema, { 'inn' => '1' }, false, { 'inn' => '1', 'kind' => 'person' }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, { 'name' => 'x' }, true, { 'name' => 'x', 'kind' => 'person' }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+  end
+
+  def test_before_property_validation_values_are_seen_by_dependent_schemas
+    compute = proc { |data, property, property_schema, _parent| data[property] = 1 if property_schema.is_a?(Hash) && property_schema['x-computed'] }
+    schema = {
+      'properties' => { 'total' => { 'x-computed' => true } },
+      'dependentSchemas' => { 'total' => { 'required' => ['currency'] } }
+    }
+    assert_isolated(schema, {}, false, { 'total' => 1 }, before_property_validation: [compute])
+    assert_isolated(schema, { 'currency' => 'EUR' }, true, { 'currency' => 'EUR', 'total' => 1 }, before_property_validation: [compute])
+  end
+
   def test_before_property_validation_runs_once
     calls = Hash.new(0)
     counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }
