@@ -567,36 +567,49 @@ class HooksTest < Minitest::Test
   end
 
   def test_property_hooks_arguments
-    calls = []
-    hook = proc do |data, property, property_schema, parent_schema, instance_location, subschema|
-      calls << [property, instance_location, subschema.schema_pointer, subschema.value.equal?(property_schema), parent_schema.key?('properties'), data.key?(property)]
+    old_calls = []
+    old_format = proc do |data, property, property_schema, parent_schema|
+      old_calls << [property, property_schema, parent_schema.key?('properties'), data.key?(property)]
+    end
+    new_calls = []
+    new_format = proc do |data, key, schema, parent_schema, location|
+      new_calls << [key, location, schema.schema_pointer, parent_schema.schema_pointer, data.key?(key)]
     end
     schemer = JSONSchemer.schema(
       {
         'properties' => { 'items' => { 'type' => 'array', 'items' => { '$ref' => '#/$defs/item' } } },
         '$defs' => { 'item' => { 'properties' => { 'total' => { '$ref' => '#/$defs/total' } } }, 'total' => { 'x-expression' => 'a + b' } }
       },
-      before_property_validation: [hook],
-      after_property_validation: [hook]
+      before_property_validation: [old_format, new_format],
+      after_property_validation: [old_format, new_format]
     )
 
     assert(schemer.valid?({ 'items' => [{ 'total' => 1 }, {}] }))
+    items_schema = { 'type' => 'array', 'items' => { '$ref' => '#/$defs/item' } }
+    total_schema = { '$ref' => '#/$defs/total' }
     assert_equal(
       [
-        ['items', '', '/properties/items', true, true, true],
-        ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
-        ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
-        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
-        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
-        ['items', '', '/properties/items', true, true, true]
+        ['items', items_schema, true, true],
+        ['total', total_schema, true, true], ['total', total_schema, true, true],
+        ['total', total_schema, true, false], ['total', total_schema, true, false],
+        ['items', items_schema, true, true]
       ],
-      calls
+      old_calls
+    )
+    assert_equal(
+      [
+        ['items', '', '/properties/items', '', true],
+        ['total', '/items/0', '/$defs/item/properties/total', '/$defs/item', true], ['total', '/items/0', '/$defs/item/properties/total', '/$defs/item', true],
+        ['total', '/items/1', '/$defs/item/properties/total', '/$defs/item', false], ['total', '/items/1', '/$defs/item/properties/total', '/$defs/item', false],
+        ['items', '', '/properties/items', '', true]
+      ],
+      new_calls
     )
 
-    # the subschema resolves references, eg to find an expression behind `$ref`
+    # the schema object resolves references, eg to find an expression behind `$ref`
     expressions = []
-    collect = proc do |_data, _property, _property_schema, _parent_schema, _instance_location, subschema|
-      expressions << subschema.parsed['$ref']&.ref_schema&.value&.fetch('x-expression')
+    collect = proc do |_data, _key, schema, _parent_schema, _location|
+      expressions << schema.parsed['$ref']&.ref_schema&.value&.fetch('x-expression')
     end
     JSONSchemer.schema(schemer.value, before_property_validation: [collect]).valid?({ 'items' => [{}] })
     assert_equal([nil, 'a + b'], expressions)
@@ -912,8 +925,8 @@ class HooksTest < Minitest::Test
   end
 
   def test_insert_property_default_hook_called_directly
-    wrapper = proc do |data, property, property_schema, parent|
-      JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT.call(data, property, property_schema, parent)
+    wrapper = proc do |data, key, schema, parent_schema, location|
+      JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT.call(data, key, schema, parent_schema, location)
     end
     schema = {
       'properties' => {
@@ -927,7 +940,7 @@ class HooksTest < Minitest::Test
 
     data = { :b => 'existing' }
     assert(JSONSchemer.schema(schema, before_property_validation: [wrapper]).valid?(data))
-    assert_equal({ :b => 'existing', 'a' => { 'x' => ['y'] } }, data)
+    assert_equal({ :b => 'existing', 'a' => { 'x' => ['y'] }, 'c' => 'c' }, data)
     refute_same(schema.dig('properties', 'a', 'default'), data.fetch('a'))
     refute_same(schema.dig('properties', 'a', 'default', 'x'), data.fetch('a').fetch('x'))
   end

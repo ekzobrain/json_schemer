@@ -14,7 +14,7 @@
 - `before_value_validation` and `after_value_validation` hooks, called before and after each value in an object or array is validated (`properties`, `patternProperties`, `additionalProperties`, `unevaluatedProperties`, `prefixItems`, `items`, `additionalItems`, `unevaluatedItems`, `contains`).
 - `deferred_value_validation` hook, called for each validated value once the whole instance is validated.
 - `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` hook to insert defaults in a single validation pass (recommended in `before_object_validation`).
-- `before_property_validation` and `after_property_validation` hooks also receive the instance location (JSON pointer) and the property's `JSONSchemer::Schema`. Hooks get as many arguments as they accept, so existing lambda and method hooks keep working.
+- `before_property_validation` and `after_property_validation` hooks declaring five parameters get the same arguments as the new hooks (schema objects and the instance location); others keep getting the original four.
 - Documented changing keyword evaluation order with a meta schema's `keyword_order`.
 
 ## [2.5.0] - 2025-12-08

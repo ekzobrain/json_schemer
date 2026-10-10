@@ -69,21 +69,22 @@ module JSONSchemer
       instance.replace(deep_stringify_keys(original_instance)) unless context.stringified_keys || context.detached
     end
 
-    # Calls a hook with as many arguments as it accepts, so hooks written for fewer arguments (eg lambdas or methods
-    # taking the original four property hook arguments) keep working. Procs ignore extra arguments themselves.
+    # Calls a hook with as many arguments as it accepts, so lambdas and methods can take fewer. Procs ignore extra
+    # arguments themselves.
     def call_hook(hook, *args)
-      max_arguments = (@hook_max_arguments ||= {}.compare_by_identity).fetch(hook) do
-        @hook_max_arguments[hook] = hook_max_arguments(hook)
-      end
-      max_arguments && max_arguments < args.size ? hook.call(*args.first(max_arguments)) : hook.call(*args)
+      strict = !hook.is_a?(Proc) || hook.lambda?
+      count = hook_parameter_count(hook)
+      strict && count && count < args.size ? hook.call(*args.first(count)) : hook.call(*args)
     end
 
-    def hook_max_arguments(hook)
-      return if hook.is_a?(Proc) && !hook.lambda?
-      return unless hook.respond_to?(:parameters)
-      parameters = hook.parameters
-      return if parameters.any? { |type, _name| type == :rest }
-      parameters.count { |type, _name| type == :req || type == :opt }
+    # Number of arguments a hook declares, or nil if it takes any number.
+    def hook_parameter_count(hook)
+      (@hook_parameter_counts ||= {}.compare_by_identity).fetch(hook) do
+        @hook_parameter_counts[hook] = if hook.respond_to?(:parameters)
+          parameters = hook.parameters
+          parameters.count { |type, _name| type == :req || type == :opt } unless parameters.any? { |type, _name| type == :rest }
+        end
+      end
     end
 
     # Caller's object/array whose values are validated, for value hooks (`before_value_validation`,

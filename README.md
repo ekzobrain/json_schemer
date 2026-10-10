@@ -302,16 +302,7 @@ hooks are called in this order (`data`: key):
 
 ### Arguments
 
-`before_property_validation` and `after_property_validation` are called for every property listed in `properties` with:
-
-1. `data`: the object being validated
-2. `property`: the property name
-3. `property_schema`: the property's schema (`Hash`/`true`/`false` as given, references not resolved)
-4. `parent_schema`: the schema containing `properties` (as given)
-5. `instance_location`: JSON pointer of `data` in the instance (eg `/items/3`)
-6. `subschema`: the property's `JSONSchemer::Schema`
-
-The other hooks are called with:
+Hooks are called with:
 
 1. `data`: the object or array being validated
 2. `key`: the property name or the array index (`Integer`)
@@ -319,7 +310,9 @@ The other hooks are called with:
 4. `parent_schema`: the `JSONSchemer::Schema` containing the keyword (eg `properties` or `items`)
 5. `location`: JSON pointer of `data` in the instance (eg `/items/3`); the value is at `"#{location}/#{key}"`
 
-Hooks only get as many arguments as they accept, so lambdas and methods can take fewer (eg the original four property hook arguments).
+`before_property_validation` and `after_property_validation` hooks declaring fewer than five parameters (like the ones written for earlier versions) get the original arguments instead: `data`, `property`, `property_schema` and `parent_schema`, with schemas as given (`Hash`/`true`/`false`, references not resolved). Hooks that take any number of arguments (`*args`) get the original arguments too.
+
+Lambdas and methods only get as many arguments as they declare.
 
 ### `before_object_validation`
 
