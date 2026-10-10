@@ -47,24 +47,31 @@ module JSONSchemer
         transactions.last.objects[object] ||= [object.dup] if transactions.any?
       end
 
-      def defer(&call)
+      # Queues a `deferred_value_validation` call (see `Keyword#call_value_hooks` for the arguments).
+      def defer(call)
         (transactions.last&.calls || deferred_calls) << call
       end
 
       def run_deferred_calls
-        deferred_calls.each(&:call)
+        deferred_calls.each do |keyword, data, key, subschema, value_location|
+          keyword.send(:call_value_hooks, keyword.root.deferred_value_validation, data, key, subschema, value_location)
+        end
         deferred_calls.clear
       end
 
+      # Object at `instance_location` in the caller's data, found by walking up the location tree (names are
+      # unescaped keys), falling back to symbol keys.
       def original_instance(instance_location)
-        Hana::Pointer.parse(Location.resolve(instance_location)).reduce(instance) do |obj, token|
-          if obj.is_a?(Array)
-            obj.fetch(token.to_i)
-          elsif !obj.key?(token) && obj.key?(token.to_sym)
-            obj.fetch(token.to_sym)
-          else
-            obj.fetch(token)
-          end
+        parent_location = instance_location[:parent]
+        return instance unless parent_location
+        parent = original_instance(parent_location)
+        name = instance_location.fetch(:name)
+        if parent.is_a?(Array)
+          parent.fetch(name.to_i)
+        elsif !parent.key?(name) && parent.key?(name.to_sym)
+          parent.fetch(name.to_sym)
+        else
+          parent.fetch(name)
         end
       end
     end
@@ -125,8 +132,37 @@ module JSONSchemer
 
     attr_accessor :base_uri, :meta_schema, :keywords, :keyword_order
     attr_reader :value, :parent, :root, :configuration, :parsed
-    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_object_validation, :before_property_validation, :before_value_validation, :after_value_validation, :after_property_validation, :deferred_value_validation, :insert_property_defaults
-    def_delegator :@configuration, :keywords, :custom_keywords
+    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :insert_property_defaults
+
+    # Read for every validated object, so they're read from the configuration once instead of through `Forwardable`
+    # delegators, which allocate an arguments array on every call.
+    def custom_keywords
+      @custom_keywords ||= @configuration.keywords
+    end
+
+    def before_object_validation
+      @before_object_validation ||= @configuration.before_object_validation
+    end
+
+    def before_property_validation
+      @before_property_validation ||= @configuration.before_property_validation
+    end
+
+    def before_value_validation
+      @before_value_validation ||= @configuration.before_value_validation
+    end
+
+    def after_value_validation
+      @after_value_validation ||= @configuration.after_value_validation
+    end
+
+    def after_property_validation
+      @after_property_validation ||= @configuration.after_property_validation
+    end
+
+    def deferred_value_validation
+      @deferred_value_validation ||= @configuration.deferred_value_validation
+    end
 
     def initialize(
       value,
@@ -213,11 +249,13 @@ module JSONSchemer
     end
 
     def property_hooks?
-      before_object_validation.any? || before_property_validation.any? || after_property_validation.any? || value_hooks?
+      return @property_hooks if defined?(@property_hooks)
+      @property_hooks = before_object_validation.any? || before_property_validation.any? || after_property_validation.any? || value_hooks?
     end
 
     def value_hooks?
-      before_value_validation.any? || after_value_validation.any? || deferred_value_validation.any?
+      return @value_hooks if defined?(@value_hooks)
+      @value_hooks = before_value_validation.any? || after_value_validation.any? || deferred_value_validation.any?
     end
 
     def valid_schema?(**options)

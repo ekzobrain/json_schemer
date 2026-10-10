@@ -342,10 +342,9 @@ module JSONSchemer
             data = caller_instance(instance, instance_location, context)
             context.record_change(data)
             context.record_change(instance)
-            root.before_object_validation.each do |hook|
-              parsed.each do |property, subschema|
-                call_hook(hook, data, property, subschema, schema, Location.resolve(Location.join(instance_location, property)))
-              end
+            hooks = root.before_object_validation
+            parsed.each do |property, subschema|
+              call_value_hooks(hooks, data, property, subschema, Location.join(instance_location, property))
             end
             sync_instance(instance, data, context)
           end

@@ -18,7 +18,7 @@ module JSONSchemer
       end
 
       def escape_json_pointer_token(token)
-        token.gsub(JSON_POINTER_TOKEN_ESCAPE_REGEX, JSON_POINTER_TOKEN_ESCAPE_CHARS)
+        JSON_POINTER_TOKEN_ESCAPE_REGEX.match?(token) ? token.gsub(JSON_POINTER_TOKEN_ESCAPE_REGEX, JSON_POINTER_TOKEN_ESCAPE_CHARS) : token
       end
     end
   end

@@ -640,6 +640,19 @@ class HooksTest < Minitest::Test
     )
   end
 
+  def test_value_hooks_with_fewer_arguments
+    calls = []
+    hooks = [
+      -> { calls << [] },
+      ->(data) { calls << [data.class] },
+      ->(_data, key) { calls << [key] },
+      ->(_data, key, schema) { calls << [key, schema.schema_pointer] },
+      ->(_data, key, schema, parent_schema) { calls << [key, schema.schema_pointer, parent_schema.schema_pointer] }
+    ]
+    assert(JSONSchemer.schema({ 'properties' => { 'a' => {} } }, before_value_validation: hooks).valid?({ 'a' => 1 }))
+    assert_equal([[], [Hash], ['a'], ['a', '/properties/a'], ['a', '/properties/a', '']], calls)
+  end
+
   def record_property_hook_call(_data, property, property_schema, _parent_schema)
     @property_hook_calls << [:method, property, property_schema]
   end
