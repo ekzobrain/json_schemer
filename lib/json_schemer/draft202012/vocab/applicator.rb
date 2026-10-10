@@ -342,10 +342,9 @@ module JSONSchemer
             data = caller_instance(instance, instance_location, context)
             context.record_change(data)
             context.record_change(instance)
-            location = Location.resolve(instance_location)
             root.before_object_validation.each do |hook|
               parsed.each do |property, subschema|
-                call_hook(hook, data, property, subschema, schema, location)
+                call_hook(hook, data, property, subschema, schema, Location.resolve(Location.join(instance_location, property)))
               end
             end
             sync_instance(instance, data, context)
@@ -381,14 +380,13 @@ module JSONSchemer
             data = caller_instance(instance, instance_location, context)
             context.record_change(data)
             context.record_change(instance)
-            location = Location.resolve(instance_location)
             hooks.each do |hook|
               # hooks declaring at least five parameters get the same arguments as the other hooks, others the original
               # four (property schemas as given)
               new_arguments = (count = hook_parameter_count(hook)) && count >= 5
               parsed.each do |property, subschema|
                 if new_arguments
-                  call_hook(hook, data, property, subschema, schema, location)
+                  call_hook(hook, data, property, subschema, schema, Location.resolve(Location.join(instance_location, property)))
                 else
                   call_hook(hook, data, property, subschema.value, schema.value)
                 end

@@ -308,7 +308,7 @@ Hooks are called with:
 2. `key`: the property name or the array index (`Integer`)
 3. `schema`: the `JSONSchemer::Schema` the value is validated with. `schema.value` is the schema as given; the object also resolves references (`schema.parsed['$ref'].ref_schema`), finds defaults behind them (`schema.default_keyword_instance`) and knows its location (`schema.schema_pointer`)
 4. `parent_schema`: the `JSONSchemer::Schema` containing the keyword (eg `properties` or `items`)
-5. `location`: JSON pointer of `data` in the instance (eg `/items/3`); the value is at `"#{location}/#{key}"`
+5. `location`: JSON pointer of the value in the instance (eg `/items/3/price`), escaped as needed (a `a/b` key is `/a~1b`). For missing properties, it's where the value would be
 
 `before_property_validation` and `after_property_validation` hooks declaring fewer than five parameters (like the ones written for earlier versions) get the original arguments instead: `data`, `property`, `property_schema` and `parent_schema`, with schemas as given (`Hash`/`true`/`false`, references not resolved). Hooks that take any number of arguments (`*args`) get the original arguments too.
 
@@ -436,7 +436,7 @@ Called once the whole instance is validated, for each value in an object or arra
 dates = []
 convert_dates = proc do |data, key, schema, _parent_schema, location|
   if data[key].is_a?(String) && schema.value.is_a?(Hash) && schema.value['format'] == 'date'
-    dates << "#{location}/#{key}"
+    dates << location
     data[key] = Date.iso8601(data[key])
   end
 end

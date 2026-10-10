@@ -598,10 +598,10 @@ class HooksTest < Minitest::Test
     )
     assert_equal(
       [
-        ['items', '', '/properties/items', '', true],
-        ['total', '/items/0', '/$defs/item/properties/total', '/$defs/item', true], ['total', '/items/0', '/$defs/item/properties/total', '/$defs/item', true],
-        ['total', '/items/1', '/$defs/item/properties/total', '/$defs/item', false], ['total', '/items/1', '/$defs/item/properties/total', '/$defs/item', false],
-        ['items', '', '/properties/items', '', true]
+        ['items', '/items', '/properties/items', '', true],
+        ['total', '/items/0/total', '/$defs/item/properties/total', '/$defs/item', true], ['total', '/items/0/total', '/$defs/item/properties/total', '/$defs/item', true],
+        ['total', '/items/1/total', '/$defs/item/properties/total', '/$defs/item', false], ['total', '/items/1/total', '/$defs/item/properties/total', '/$defs/item', false],
+        ['items', '/items', '/properties/items', '', true]
       ],
       new_calls
     )
@@ -660,19 +660,29 @@ class HooksTest < Minitest::Test
     assert(schemer.valid?({ 'list' => [1, 'a'], 'pattern' => nil, 'other' => true }))
     assert_equal(
       [
-        ['list', '', '/properties/list', '', Hash],
-        [0, '/list', '/properties/list/prefixItems/0', '/properties/list', Array],
-        [1, '/list', '/properties/list/items', '/properties/list', Array],
-        ['pattern', '', '/patternProperties/^p', '', Hash],
-        ['other', '', '/additionalProperties', '', Hash]
+        ['list', '/list', '/properties/list', '', Hash],
+        [0, '/list/0', '/properties/list/prefixItems/0', '/properties/list', Array],
+        [1, '/list/1', '/properties/list/items', '/properties/list', Array],
+        ['pattern', '/pattern', '/patternProperties/^p', '', Hash],
+        ['other', '/other', '/additionalProperties', '', Hash]
       ],
       calls
     )
   end
 
+  def test_hook_locations_are_escaped_json_pointers
+    locations = []
+    hook = proc { |_data, _key, _schema, _parent_schema, location| locations << location }
+    schema = { 'properties' => { 'a/b' => { 'items' => {} }, 'c~d' => {} } }
+    data = { 'a/b' => [1], 'c~d' => 2 }
+    assert(JSONSchemer.schema(schema, before_object_validation: [hook], deferred_value_validation: [hook]).valid?(data))
+    assert_equal(['/a~1b', '/c~0d', '/a~1b/0', '/a~1b', '/c~0d'], locations)
+    assert_equal([[1], 2, 1, [1], 2], locations.map { |location| Hana::Pointer.new(location).eval(data) })
+  end
+
   def test_value_hooks_for_all_keywords
     keys = []
-    hook = proc { |data, key, _schema, _parent_schema, location| keys << "#{location}/#{key}" if data.is_a?(Array) || data.key?(key) }
+    hook = proc { |data, key, _schema, _parent_schema, location| keys << location if data.is_a?(Array) || data.key?(key) }
     {
       JSONSchemer.draft202012 => [
         { 'prefixItems' => [{}], 'items' => {}, 'contains' => { 'type' => 'integer' } },
@@ -703,7 +713,7 @@ class HooksTest < Minitest::Test
   def test_value_hooks_timing
     calls = []
     log = proc do |name|
-      proc { |_data, key, _schema, _parent_schema, location| calls << [name, location, key] }
+      proc { |_data, _key, _schema, _parent_schema, location| calls << [name, location] }
     end
     schemer = JSONSchemer.schema(
       { 'properties' => { 'a' => { 'properties' => { 'x' => {} } }, 'b' => {} } },
@@ -717,14 +727,14 @@ class HooksTest < Minitest::Test
     assert(schemer.valid?({ 'a' => { 'x' => 1 }, 'b' => 2 }))
     assert_equal(
       [
-        ['object', '', 'a'], ['object', '', 'b'],
-        ['before_property', '', 'a'], ['before_property', '', 'b'],
-        ['before_value', '', 'a'],
-        ['object', '/a', 'x'], ['before_property', '/a', 'x'], ['before_value', '/a', 'x'], ['after_value', '/a', 'x'], ['after_property', '/a', 'x'],
-        ['after_value', '', 'a'],
-        ['before_value', '', 'b'], ['after_value', '', 'b'],
-        ['after_property', '', 'a'], ['after_property', '', 'b'],
-        ['deferred', '/a', 'x'], ['deferred', '', 'a'], ['deferred', '', 'b']
+        ['object', '/a'], ['object', '/b'],
+        ['before_property', '/a'], ['before_property', '/b'],
+        ['before_value', '/a'],
+        ['object', '/a/x'], ['before_property', '/a/x'], ['before_value', '/a/x'], ['after_value', '/a/x'], ['after_property', '/a/x'],
+        ['after_value', '/a'],
+        ['before_value', '/b'], ['after_value', '/b'],
+        ['after_property', '/a'], ['after_property', '/b'],
+        ['deferred', '/a/x'], ['deferred', '/a'], ['deferred', '/b']
       ],
       calls
     )

@@ -98,7 +98,8 @@ module JSONSchemer
     def validate_value(data, instance, key, subschema, instance_location, context)
       return yield unless data
 
-      location = Location.resolve(instance_location)
+      # JSON pointer of the value (the same location object is used to validate it)
+      location = Location.resolve(Location.join(instance_location, key.to_s))
       # recorded in the current transaction (eg of a `contains` item), so that changes are rolled back with it
       if root.before_value_validation.any? || root.after_value_validation.any?
         context.record_change(data)
