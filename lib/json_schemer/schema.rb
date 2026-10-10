@@ -2,12 +2,11 @@
 module JSONSchemer
   class Schema
     Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls) do
-      # Property hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`)
-      # run in a transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
-      # - hashes are recorded (shallow copy) before `before_property_validation`, `before_property_value_validation` and
-      #   `after_property_value_validation` hooks change them and are restored afterwards (hooks must only assign
-      #   properties of the hash they're given for this to work);
-      # - `after_property_validation` hook calls are deferred until the whole instance is validated (so no keyword
+      # Hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`) run in a
+      # transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
+      # - objects and arrays are recorded (shallow copy) before hooks change them and are restored afterwards (hooks
+      #   must only assign properties/items of the object/array they're given for this to work);
+      # - `deferred_value_validation` hook calls are deferred until the whole instance is validated (so no keyword
       #   sees their changes) and dropped with failed attempts.
       # `transactions` is nil when there are no hooks, which turns all of this off.
       Transaction = Struct.new(:objects, :calls)
@@ -111,13 +110,17 @@ module JSONSchemer
       end
     end
 
-    # `before_property_validation` hook that inserts `default` values of missing properties. Unlike
-    # `insert_property_defaults`, defaults are inserted before the schema is validated (so `required`, `oneOf`, etc.
-    # see them) and without a second validation pass. Defaults inserted in subschemas that turn out not to apply
-    # (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back. Defaults behind `$ref`, `$dynamicRef` and `$recursiveRef`
-    # are found using the property subschema (6th argument); without it, only `default` in the property schema is used.
-    INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent, _instance_location, subschema|
+    # Hook that inserts `default` values of missing properties, recommended in `before_object_validation`: defaults
+    # are then inserted before the schema is validated (so `$ref`, `oneOf`, `if`, `required`, etc. see them) and
+    # without a second validation pass like `insert_property_defaults`. Defaults inserted in subschemas that turn out
+    # not to apply (`anyOf`/`oneOf` branches, `if`, etc.) are rolled back. Also works in `before_property_validation`
+    # and `before_value_validation`. Defaults behind `$ref`, `$dynamicRef` and `$recursiveRef` are found using the
+    # property's schema object; without one (called with only the four original property hook arguments), only
+    # `default` in the property schema is used.
+    INSERT_PROPERTY_DEFAULT = proc do |data, property, property_schema, _parent_schema = nil, _instance_location = nil, subschema = nil|
+      next unless data.is_a?(Hash)
       next if data.key?(property) || data.key?(property.to_sym)
+      subschema ||= property_schema if property_schema.is_a?(Schema)
       if subschema
         next unless default = subschema.default_keyword_instance
         default = default.value
@@ -130,7 +133,7 @@ module JSONSchemer
 
     attr_accessor :base_uri, :meta_schema, :keywords, :keyword_order
     attr_reader :value, :parent, :root, :configuration, :parsed
-    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_property_validation, :after_property_validation, :before_property_value_validation, :after_property_value_validation, :insert_property_defaults
+    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_object_validation, :before_property_validation, :before_value_validation, :after_value_validation, :after_property_validation, :deferred_value_validation, :insert_property_defaults
     def_delegator :@configuration, :keywords, :custom_keywords
 
     def initialize(
@@ -147,10 +150,12 @@ module JSONSchemer
       content_encodings: configuration.content_encodings,
       content_media_types: configuration.content_media_types,
       keywords: configuration.keywords,
+      before_object_validation: configuration.before_object_validation,
       before_property_validation: configuration.before_property_validation,
+      before_value_validation: configuration.before_value_validation,
+      after_value_validation: configuration.after_value_validation,
       after_property_validation: configuration.after_property_validation,
-      before_property_value_validation: configuration.before_property_value_validation,
-      after_property_value_validation: configuration.after_property_value_validation,
+      deferred_value_validation: configuration.deferred_value_validation,
       insert_property_defaults: configuration.insert_property_defaults,
       property_default_resolver: configuration.property_default_resolver,
       ref_resolver: configuration.ref_resolver,
@@ -176,10 +181,12 @@ module JSONSchemer
         :content_encodings => content_encodings,
         :content_media_types => content_media_types,
         :keywords => keywords,
+        :before_object_validation => Array(before_object_validation),
         :before_property_validation => Array(before_property_validation),
+        :before_value_validation => Array(before_value_validation),
+        :after_value_validation => Array(after_value_validation),
         :after_property_validation => Array(after_property_validation),
-        :before_property_value_validation => Array(before_property_value_validation),
-        :after_property_value_validation => Array(after_property_value_validation),
+        :deferred_value_validation => Array(deferred_value_validation),
         :insert_property_defaults => insert_property_defaults,
         :property_default_resolver => property_default_resolver,
         :ref_resolver => ref_resolver,
@@ -214,8 +221,11 @@ module JSONSchemer
     end
 
     def property_hooks?
-      before_property_validation.any? || after_property_validation.any? ||
-        before_property_value_validation.any? || after_property_value_validation.any?
+      before_object_validation.any? || before_property_validation.any? || after_property_validation.any? || value_hooks?
+    end
+
+    def value_hooks?
+      before_value_validation.any? || after_value_validation.any? || deferred_value_validation.any?
     end
 
     def valid_schema?(**options)
@@ -240,8 +250,8 @@ module JSONSchemer
         return result(instance, instance_location, keyword_location, false) if value == false
         return result(instance, instance_location, keyword_location, true) if value == true || value.empty?
 
-        if instance.is_a?(Hash) && root.before_property_validation.any? && (properties = parsed['properties']).is_a?(PROPERTIES_KEYWORD_CLASS)
-          properties.before_property_validation(instance, instance_location, context)
+        if instance.is_a?(Hash) && root.before_object_validation.any? && (properties = parsed['properties']).is_a?(PROPERTIES_KEYWORD_CLASS)
+          properties.before_object_validation(instance, instance_location, context)
         end
 
         valid = true
@@ -278,9 +288,9 @@ module JSONSchemer
     end
 
     def validate_instance_boolean(instance, stringified_keys: @configuration.stringified_keys, access_mode: @configuration.access_mode, **)
-      return nil if insert_property_defaults || root.custom_keywords.any?
+      return nil if insert_property_defaults || root.custom_keywords.any? || root.property_hooks?
 
-      context = Context.new(instance, [], nil, true, access_mode, stringified_keys, property_hooks? ? [] : nil, nil, [])
+      context = Context.new(instance, [], nil, true, access_mode, stringified_keys)
       instance = stringified_keys ? instance : deep_stringify_keys(instance)
       valid_instance?(instance, context)
     end

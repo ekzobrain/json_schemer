@@ -69,5 +69,61 @@ module JSONSchemer
       instance.replace(deep_stringify_keys(original_instance)) unless context.stringified_keys || context.detached
     end
 
+    # Calls a hook with as many arguments as it accepts, so hooks written for fewer arguments (eg lambdas or methods
+    # taking the original four property hook arguments) keep working. Procs ignore extra arguments themselves.
+    def call_hook(hook, *args)
+      max_arguments = (@hook_max_arguments ||= {}.compare_by_identity).fetch(hook) do
+        @hook_max_arguments[hook] = hook_max_arguments(hook)
+      end
+      max_arguments && max_arguments < args.size ? hook.call(*args.first(max_arguments)) : hook.call(*args)
+    end
+
+    def hook_max_arguments(hook)
+      return if hook.is_a?(Proc) && !hook.lambda?
+      return unless hook.respond_to?(:parameters)
+      parameters = hook.parameters
+      return if parameters.any? { |type, _name| type == :rest }
+      parameters.count { |type, _name| type == :req || type == :opt }
+    end
+
+    # Caller's object/array whose values are validated, for value hooks (`before_value_validation`,
+    # `after_value_validation`, `deferred_value_validation`), or nil when there are none.
+    def value_hooks_data(instance, instance_location, context)
+      caller_instance(instance, instance_location, context) if root.value_hooks?
+    end
+
+    # Calls value hooks around validating the value at `key` of `instance` with `subschema` (the block). `data` is
+    # from `value_hooks_data`.
+    def validate_value(data, instance, key, subschema, instance_location, context)
+      return yield unless data
+
+      location = Location.resolve(instance_location)
+      # recorded in the current transaction (eg of a `contains` item), so that changes are rolled back with it
+      if root.before_value_validation.any? || root.after_value_validation.any?
+        context.record_change(data)
+        context.record_change(instance)
+      end
+
+      if (hooks = root.before_value_validation).any?
+        hooks.each { |hook| call_hook(hook, data, key, subschema, schema, location) }
+        sync_instance(instance, data, context)
+      end
+
+      nested_result = yield
+
+      if (hooks = root.after_value_validation).any?
+        hooks.each { |hook| call_hook(hook, data, key, subschema, schema, location) }
+        sync_instance(instance, data, context)
+      end
+
+      if (hooks = root.deferred_value_validation).any?
+        context.defer do
+          hooks.each { |hook| call_hook(hook, data, key, subschema, schema, location) }
+        end
+      end
+
+      nested_result
+    end
+
   end
 end

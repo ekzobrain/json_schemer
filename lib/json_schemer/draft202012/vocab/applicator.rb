@@ -219,10 +219,14 @@ module JSONSchemer
 
             valid = true
             nested = []
+            value_data = value_hooks_data(instance, instance_location, context)
             limit = instance.size < parsed.size ? instance.size : parsed.size
             limit.times do |index|
               index_name = index.to_s
-              nested_result = parsed.fetch(index).validate_instance(instance.fetch(index), join_location(instance_location, index_name), join_location(keyword_location, index_name), context)
+              subschema = parsed.fetch(index)
+              nested_result = validate_value(value_data, instance, index, subschema, instance_location, context) do
+                subschema.validate_instance(instance.fetch(index), join_location(instance_location, index_name), join_location(keyword_location, index_name), context)
+              end
               valid &&= nested_result.valid
               nested << nested_result
             end
@@ -261,9 +265,12 @@ module JSONSchemer
 
             valid = true
             nested = []
+            value_data = value_hooks_data(instance, instance_location, context)
             index = offset
             while index < instance.size
-              nested_result = parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+              nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+              end
               valid &&= nested_result.valid
               nested << nested_result
               index += 1
@@ -300,9 +307,12 @@ module JSONSchemer
 
             nested = []
             annotation = []
+            value_data = value_hooks_data(instance, instance_location, context)
             instance.each_with_index do |item, index|
-              nested_result, changes = context.isolate(item) do
-                parsed.validate_instance(item, join_location(instance_location, index.to_s), keyword_location, context)
+              nested_result, changes = context.isolate(value_data ? instance : item) do
+                validate_value(value_data, instance, index, parsed, instance_location, context) do
+                  parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                end
               end
               context.apply_changes(changes) if nested_result.valid
               nested << nested_result
@@ -328,74 +338,60 @@ module JSONSchemer
           end
 
           # Called by the schema before any of its keywords are validated, so that every keyword sees the changes.
-          def before_property_validation(instance, instance_location, context)
-            original_instance = caller_instance(instance, instance_location, context)
-            context.record_change(original_instance)
+          def before_object_validation(instance, instance_location, context)
+            data = caller_instance(instance, instance_location, context)
+            context.record_change(data)
             context.record_change(instance)
-            call_hooks(root.before_property_validation, original_instance, instance_location)
-            sync_instance(instance, original_instance, context)
+            location = Location.resolve(instance_location)
+            root.before_object_validation.each do |hook|
+              parsed.each do |property, subschema|
+                call_hook(hook, data, property, subschema, schema, location)
+              end
+            end
+            sync_instance(instance, data, context)
           end
 
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
-            before_value_hooks = root.before_property_value_validation
-            after_value_hooks = root.after_property_value_validation
-            if before_value_hooks.any? || after_value_hooks.any?
-              original_instance = caller_instance(instance, instance_location, context)
-              context.record_change(original_instance)
-              context.record_change(instance)
-              resolved_instance_location = Location.resolve(instance_location)
-            end
+            call_property_hooks(root.before_property_validation, instance, instance_location, context)
 
             evaluated_keys = []
             nested = []
+            value_data = value_hooks_data(instance, instance_location, context)
 
             parsed.each do |property, subschema|
-              # called for each property in turn, so previous properties (and objects nested in them) are already
-              # validated and processed by hooks
-              if before_value_hooks.any?
-                before_value_hooks.each { |hook| call_hook(hook, original_instance, property, subschema, resolved_instance_location) }
-                sync_instance(instance, original_instance, context)
+              # value hooks are called for every property, including missing ones (eg to insert or compute them)
+              nested_result = validate_value(value_data, instance, property, subschema, instance_location, context) do
+                if instance.key?(property)
+                  evaluated_keys << property
+                  subschema.validate_instance(instance.fetch(property), join_location(instance_location, property), join_location(keyword_location, property), context)
+                end
               end
-
-              if instance.key?(property)
-                evaluated_keys << property
-                nested << subschema.validate_instance(instance.fetch(property), join_location(instance_location, property), join_location(keyword_location, property), context)
-              end
-
-              if after_value_hooks.any?
-                after_value_hooks.each { |hook| call_hook(hook, original_instance, property, subschema, resolved_instance_location) }
-                sync_instance(instance, original_instance, context)
-              end
+              nested << nested_result if nested_result
             end
 
-            if root.after_property_validation.any?
-              original_instance = caller_instance(instance, instance_location, context)
-              context.defer do
-                call_hooks(root.after_property_validation, original_instance, instance_location)
-              end
-            end
+            call_property_hooks(root.after_property_validation, instance, instance_location, context)
 
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)
           end
 
-          def call_hooks(hooks, data, instance_location)
-            resolved_instance_location = Location.resolve(instance_location)
+          def call_property_hooks(hooks, instance, instance_location, context)
+            return if hooks.empty?
+            data = caller_instance(instance, instance_location, context)
+            context.record_change(data)
+            context.record_change(instance)
+            location = Location.resolve(instance_location)
             hooks.each do |hook|
               parsed.each do |property, subschema|
-                call_hook(hook, data, property, subschema, resolved_instance_location)
+                call_hook(hook, data, property, subschema.value, schema.value, location, subschema)
               end
             end
-          end
-
-          def call_hook(hook, data, property, subschema, resolved_instance_location)
-            hook.call(data, property, subschema.value, schema.value, resolved_instance_location, subschema)
+            sync_instance(instance, data, context)
           end
 
           def valid_instance?(instance, context)
             return true unless instance.is_a?(Hash)
-            return nil if root.property_hooks?
 
             parsed.each do |property, subschema|
               next unless instance.key?(property)
@@ -424,13 +420,17 @@ module JSONSchemer
 
             evaluated = Set[]
             nested = []
+            value_data = value_hooks_data(instance, instance_location, context)
 
             parsed.each do |pattern, subschema|
               regexp = root.resolve_regexp(pattern)
-              instance.each do |key, value|
+              # hooks can change the instance, so iterate over a copy of its keys
+              (value_data ? instance.keys : instance).each do |key, _value|
                 if regexp.match?(key)
                   evaluated << key
-                  nested << subschema.validate_instance(value, join_location(instance_location, key), join_location(keyword_location, pattern), context)
+                  nested << validate_value(value_data, instance, key, subschema, instance_location, context) do
+                    subschema.validate_instance(instance.fetch(key), join_location(instance_location, key), join_location(keyword_location, pattern), context)
+                  end
                 end
               end
             end
@@ -461,9 +461,13 @@ module JSONSchemer
             valid = true
             nested = []
             evaluated = []
-            instance.each do |key, value|
+            value_data = value_hooks_data(instance, instance_location, context)
+            # hooks can change the instance, so iterate over a copy of its keys
+            (value_data ? instance.keys : instance).each do |key, _value|
               next if property_keys.include?(key) || pattern_property_keys.include?(key)
-              nested_result = parsed.validate_instance(value, join_location(instance_location, key), keyword_location, context)
+              nested_result = validate_value(value_data, instance, key, parsed, instance_location, context) do
+                parsed.validate_instance(instance.fetch(key), join_location(instance_location, key), keyword_location, context)
+              end
               valid &&= nested_result.valid
               nested << nested_result
               evaluated << key

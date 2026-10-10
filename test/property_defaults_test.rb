@@ -539,10 +539,10 @@ end
 class InsertPropertyDefaultHookTest < Minitest::Test
   include PropertyDefaultsTests
 
-  def defaults_schemer(schema, before_property_validation: [], **options)
+  def defaults_schemer(schema, before_object_validation: [], **options)
     JSONSchemer.schema(
       schema,
-      before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, *before_property_validation],
+      before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, *before_object_validation],
       **options
     )
   end

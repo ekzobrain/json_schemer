@@ -480,7 +480,7 @@ class HooksTest < Minitest::Test
     assert_equal({ :item => { :start_date => '2020-09-03' } }, data)
   end
 
-  def test_before_property_validation_runs_before_other_keywords
+  def test_before_object_validation_runs_before_other_keywords
     schema = {
       'properties' => { 'kind' => { 'default' => 'a' } },
       'oneOf' => [
@@ -490,11 +490,14 @@ class HooksTest < Minitest::Test
       'if' => { 'required' => ['kind'] },
       'then' => { 'properties' => { 'checked' => { 'default' => true } } }
     }
-    assert_isolated(schema, {}, true, { 'kind' => 'a', 'checked' => true }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
-    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'checked' => true }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, {}, true, { 'kind' => 'a', 'checked' => true }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'checked' => true }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+
+    # `before_property_validation` runs in `properties`, after `oneOf`
+    refute(JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?({}))
   end
 
-  def test_before_property_validation_values_are_seen_by_conditionals
+  def test_before_object_validation_values_are_seen_by_conditionals
     schema = {
       'properties' => { 'kind' => { 'enum' => ['person', 'company'], 'default' => 'person' }, 'name' => {}, 'inn' => {} },
       'if' => { 'properties' => { 'kind' => { 'const' => 'company' } } },
@@ -502,21 +505,25 @@ class HooksTest < Minitest::Test
       'else' => { 'required' => ['name'] }
     }
     # `if` must see the inserted default, otherwise it passes because `kind` is missing and `then` is applied
-    assert_isolated(schema, { 'inn' => '1' }, false, { 'inn' => '1', 'kind' => 'person' }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
-    assert_isolated(schema, { 'name' => 'x' }, true, { 'name' => 'x', 'kind' => 'person' }, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, { 'inn' => '1' }, false, { 'inn' => '1', 'kind' => 'person' }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+    assert_isolated(schema, { 'name' => 'x' }, true, { 'name' => 'x', 'kind' => 'person' }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
   end
 
-  def test_before_property_validation_values_are_seen_by_dependent_schemas
-    compute = proc { |data, property, property_schema, _parent| data[property] = 1 if property_schema.is_a?(Hash) && property_schema['x-computed'] }
+  def test_before_object_validation_values_are_seen_by_dependent_schemas
+    compute = proc { |data, key, schema| data[key] = 1 if schema.value.is_a?(Hash) && schema.value['x-computed'] }
     schema = {
       'properties' => { 'total' => { 'x-computed' => true } },
       'dependentSchemas' => { 'total' => { 'required' => ['currency'] } }
     }
-    assert_isolated(schema, {}, false, { 'total' => 1 }, before_property_validation: [compute])
-    assert_isolated(schema, { 'currency' => 'EUR' }, true, { 'currency' => 'EUR', 'total' => 1 }, before_property_validation: [compute])
+    assert_isolated(schema, {}, false, { 'total' => 1 }, before_object_validation: [compute])
+    assert_isolated(schema, { 'currency' => 'EUR' }, true, { 'currency' => 'EUR', 'total' => 1 }, before_object_validation: [compute])
   end
 
-  def test_after_property_validation_changes_are_not_validated
+  CONVERT_DATE_VALUE = proc do |data, key, schema|
+    data[key] = Date.iso8601(data[key]) if data[key].is_a?(String) && schema.value.is_a?(Hash) && schema.value['format'] == 'date'
+  end
+
+  def test_deferred_value_validation_changes_are_not_validated
     data = { 'start_date' => '2020-09-03', 'nested' => { 'end_date' => '2020-09-04' } }
     converted = { 'start_date' => Date.new(2020, 9, 3), 'nested' => { 'end_date' => Date.new(2020, 9, 4) } }
     date = { 'type' => 'string', 'format' => 'date' }
@@ -528,13 +535,16 @@ class HooksTest < Minitest::Test
     ]
     schemas.each do |schema|
       expected = schema.key?('const') ? converted.merge('start_date' => '2020-09-03') : converted
-      assert_isolated(schema, data, true, expected, after_property_validation: [CONVERT_DATE])
+      assert_isolated(schema, data, true, expected, deferred_value_validation: [CONVERT_DATE_VALUE])
     end
+
+    # `after_property_validation` changes are seen by later keywords
+    refute(JSONSchemer.schema(schemas.first, after_property_validation: [CONVERT_DATE]).valid?(Marshal.load(Marshal.dump(data))))
   end
 
-  def test_after_property_validation_runs_once_after_validation_for_applicable_subschemas
+  def test_deferred_value_validation_runs_once_after_validation_for_applicable_subschemas
     calls = []
-    hook = proc { |data, property, _property_schema, _parent| calls << [property, data.fetch(property, nil)] if data.key?(property) }
+    hook = proc { |data, key| calls << [key, data.fetch(key, nil)] if data.key?(key) }
     schema = {
       'properties' => { 'outer' => { 'properties' => { 'inner' => {} } } },
       'oneOf' => [
@@ -549,14 +559,14 @@ class HooksTest < Minitest::Test
     [{}, { insert_property_defaults: true }].each do |options|
       calls.clear
       data = { 'kind' => 'b', 'outer' => { 'inner' => 1 } }
-      assert(JSONSchemer.schema(schema, after_property_validation: [hook], **options).valid?(data))
-      # in validation order (`oneOf` before `properties`, nested objects before their parents), only the valid `oneOf`
-      # subschema, nothing from `not` and the failed `if`
+      assert(JSONSchemer.schema(schema, deferred_value_validation: [hook], **options).valid?(data))
+      # in validation order (`oneOf` before `properties`, nested values before the values containing them), only the
+      # valid `oneOf` subschema, nothing from `not` and the failed `if`
       assert_equal([['kind', 'b'], ['inner', 1], ['outer', { 'inner' => 1 }]], calls)
     end
   end
 
-  def test_hooks_receive_instance_location_and_subschema
+  def test_property_hooks_arguments
     calls = []
     hook = proc do |data, property, property_schema, parent_schema, instance_location, subschema|
       calls << [property, instance_location, subschema.schema_pointer, subschema.value.equal?(property_schema), parent_schema.key?('properties'), data.key?(property)]
@@ -575,8 +585,8 @@ class HooksTest < Minitest::Test
       [
         ['items', '', '/properties/items', true, true, true],
         ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
-        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
         ['total', '/items/0', '/$defs/item/properties/total', true, true, true],
+        ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
         ['total', '/items/1', '/$defs/item/properties/total', true, true, false],
         ['items', '', '/properties/items', true, true, true]
       ],
@@ -592,38 +602,127 @@ class HooksTest < Minitest::Test
     assert_equal([nil, 'a + b'], expressions)
   end
 
-  def test_property_value_hooks_timing
+  def test_property_hooks_with_fewer_arguments
     calls = []
-    log = proc do |name|
-      proc { |_data, property, _property_schema, _parent_schema, instance_location| calls << [name, instance_location, property] }
-    end
-    schemer = JSONSchemer.schema(
-      { 'properties' => { 'a' => { 'properties' => { 'x' => {} } }, 'b' => {} } },
-      before_property_validation: [log.call('before')],
-      before_property_value_validation: [log.call('before_value')],
-      after_property_value_validation: [log.call('after_value')],
-      after_property_validation: [log.call('after')]
-    )
-    assert(schemer.valid?({ 'a' => { 'x' => 1 }, 'b' => 2 }))
+    lambda_hook = ->(data, property, property_schema, parent_schema) { calls << [:lambda, property, property_schema, parent_schema.key?('properties'), data.class] }
+    @property_hook_calls = calls
+    method_hook = method(:record_property_hook_call)
+    JSONSchemer.schema(
+      { 'properties' => { 'a' => { 'type' => 'integer' } } },
+      before_property_validation: [lambda_hook],
+      after_property_validation: [method_hook],
+      before_object_validation: [->(data, key) { calls << [:object, key, data.class] }],
+      before_value_validation: [->(*args) { calls << [:rest, args.size] }],
+      after_value_validation: [Struct.new(:calls) { def call(*args) = calls << [:callable, args.size] }.new(calls)]
+    ).valid?({ 'a' => 1 })
     assert_equal(
       [
-        ['before', '', 'a'], ['before', '', 'b'],
-        ['before_value', '', 'a'],
-        ['before', '/a', 'x'], ['before_value', '/a', 'x'], ['after_value', '/a', 'x'],
-        ['after_value', '', 'a'],
-        ['before_value', '', 'b'], ['after_value', '', 'b'],
-        ['after', '/a', 'x'], ['after', '', 'a'], ['after', '', 'b']
+        [:object, 'a', Hash],
+        [:lambda, 'a', { 'type' => 'integer' }, true, Hash],
+        [:rest, 5],
+        [:callable, 5],
+        [:method, 'a', { 'type' => 'integer' }]
       ],
       calls
     )
   end
 
-  COMPUTE = proc do |data, property, property_schema, _parent_schema, _instance_location, _subschema|
-    case property_schema.is_a?(Hash) && property_schema['x-computed']
+  def record_property_hook_call(_data, property, property_schema, _parent_schema)
+    @property_hook_calls << [:method, property, property_schema]
+  end
+
+  def test_value_hooks_arguments
+    calls = []
+    hook = proc do |data, key, schema, parent_schema, location|
+      calls << [key, location, schema.schema_pointer, parent_schema.schema_pointer, data.equal?(data) && data.class]
+    end
+    schemer = JSONSchemer.schema(
+      {
+        'properties' => { 'list' => { 'prefixItems' => [{ 'type' => 'integer' }], 'items' => { 'type' => 'string' } } },
+        'patternProperties' => { '^p' => {} },
+        'additionalProperties' => { 'type' => 'boolean' }
+      },
+      before_value_validation: [hook]
+    )
+    assert(schemer.valid?({ 'list' => [1, 'a'], 'pattern' => nil, 'other' => true }))
+    assert_equal(
+      [
+        ['list', '', '/properties/list', '', Hash],
+        [0, '/list', '/properties/list/prefixItems/0', '/properties/list', Array],
+        [1, '/list', '/properties/list/items', '/properties/list', Array],
+        ['pattern', '', '/patternProperties/^p', '', Hash],
+        ['other', '', '/additionalProperties', '', Hash]
+      ],
+      calls
+    )
+  end
+
+  def test_value_hooks_for_all_keywords
+    keys = []
+    hook = proc { |data, key, _schema, _parent_schema, location| keys << "#{location}/#{key}" if data.is_a?(Array) || data.key?(key) }
+    {
+      JSONSchemer.draft202012 => [
+        { 'prefixItems' => [{}], 'items' => {}, 'contains' => { 'type' => 'integer' } },
+        { 'unevaluatedItems' => {} },
+        { 'properties' => { 'a' => {} }, 'patternProperties' => { '^b' => {} }, 'additionalProperties' => {} },
+        { 'unevaluatedProperties' => {} }
+      ],
+      JSONSchemer.draft201909 => [
+        { 'items' => [{}], 'additionalItems' => {} },
+        { 'items' => {} },
+        { 'unevaluatedItems' => {} }
+      ],
+      JSONSchemer.draft7 => [
+        { 'items' => [{}], 'additionalItems' => {} }
+      ]
+    }.each do |meta_schema, schemas|
+      schemas.each do |schema|
+        keys.clear
+        data = schema.key?('properties') || schema.key?('unevaluatedProperties') ? { 'a' => 1, 'b' => 2, 'c' => 3 } : [1, 'x']
+        assert(JSONSchemer.schema(schema, meta_schema: meta_schema, deferred_value_validation: [hook]).valid?(data))
+        expected = data.is_a?(Array) ? ['/0', '/1'] : ['/a', '/b', '/c']
+        expected += ['/0'] if schema.key?('contains') # the matching `contains` item
+        assert_equal(expected.sort, keys.sort, schema.inspect)
+      end
+    end
+  end
+
+  def test_value_hooks_timing
+    calls = []
+    log = proc do |name|
+      proc { |_data, key, _schema, _parent_schema, location| calls << [name, location, key] }
+    end
+    schemer = JSONSchemer.schema(
+      { 'properties' => { 'a' => { 'properties' => { 'x' => {} } }, 'b' => {} } },
+      before_object_validation: [log.call('object')],
+      before_property_validation: [log.call('before_property')],
+      before_value_validation: [log.call('before_value')],
+      after_value_validation: [log.call('after_value')],
+      after_property_validation: [log.call('after_property')],
+      deferred_value_validation: [log.call('deferred')]
+    )
+    assert(schemer.valid?({ 'a' => { 'x' => 1 }, 'b' => 2 }))
+    assert_equal(
+      [
+        ['object', '', 'a'], ['object', '', 'b'],
+        ['before_property', '', 'a'], ['before_property', '', 'b'],
+        ['before_value', '', 'a'],
+        ['object', '/a', 'x'], ['before_property', '/a', 'x'], ['before_value', '/a', 'x'], ['after_value', '/a', 'x'], ['after_property', '/a', 'x'],
+        ['after_value', '', 'a'],
+        ['before_value', '', 'b'], ['after_value', '', 'b'],
+        ['after_property', '', 'a'], ['after_property', '', 'b'],
+        ['deferred', '/a', 'x'], ['deferred', '', 'a'], ['deferred', '', 'b']
+      ],
+      calls
+    )
+  end
+
+  COMPUTE = proc do |data, key, schema|
+    case schema.value.is_a?(Hash) && schema.value['x-computed']
     when 'subtotal'
-      data[property] = data.fetch('price') * data.fetch('quantity')
+      data[key] = data.fetch('price') * data.fetch('quantity')
     when 'total'
-      data[property] = data.fetch('items').sum { |item| item.fetch('subtotal') }
+      data[key] = data.fetch('items').sum { |item| item.fetch('subtotal') }
     end
   end
 
@@ -647,30 +746,28 @@ class HooksTest < Minitest::Test
     'required' => ['items', 'total']
   }.freeze
 
-  def test_before_property_value_validation_computes_values_from_validated_properties
-    options = { before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT], before_property_value_validation: [COMPUTE] }
+  ORDER_HOOKS = { before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT], before_value_validation: [COMPUTE] }.freeze
+
+  def test_before_value_validation_computes_values_from_validated_values
     assert_isolated(
       ORDER_SCHEMA,
       { 'items' => [{ 'price' => 10 }, { 'price' => 20, 'quantity' => 2 }] },
       true,
       { 'items' => [{ 'price' => 10, 'quantity' => 1, 'subtotal' => 10 }, { 'price' => 20, 'quantity' => 2, 'subtotal' => 40 }], 'total' => 50 },
-      **options
+      **ORDER_HOOKS
     )
     assert_isolated(
       ORDER_SCHEMA,
       { 'items' => [{ 'price' => 60, 'quantity' => 2 }] },
       false,
       { 'items' => [{ 'price' => 60, 'quantity' => 2, 'subtotal' => 120 }], 'total' => 120 },
-      **options
+      **ORDER_HOOKS
     )
   end
 
-  def test_after_property_value_validation_changes_are_seen_by_next_properties
-    to_date = proc do |data, property, property_schema|
-      data[property] = Date.iso8601(data[property]) if data[property].is_a?(String) && property_schema['format'] == 'date'
-    end
-    next_day = proc do |data, property, property_schema|
-      data[property] = data.fetch('start') + 1 if property_schema['x-next-day']
+  def test_after_value_validation_changes_are_seen_by_next_values
+    next_day = proc do |data, key, schema|
+      data[key] = data.fetch('start') + 1 if schema.value['x-next-day']
     end
     schema = {
       'properties' => {
@@ -683,14 +780,14 @@ class HooksTest < Minitest::Test
       { 'start' => '2020-09-03' },
       true,
       { 'start' => Date.new(2020, 9, 3), 'end' => Date.new(2020, 9, 4) },
-      before_property_value_validation: [next_day],
-      after_property_value_validation: [to_date]
+      before_value_validation: [next_day],
+      after_value_validation: [CONVERT_DATE_VALUE]
     )
   end
 
-  def test_property_value_hooks_changes_are_discarded_with_failed_subschema
-    set = proc do |data, property, property_schema|
-      data[property] = property_schema.fetch('x-set') if property_schema.is_a?(Hash) && property_schema.key?('x-set')
+  def test_value_hooks_changes_are_discarded_with_failed_subschema
+    set = proc do |data, key, schema|
+      data[key] = schema.value.fetch('x-set') if schema.value.is_a?(Hash) && schema.value.key?('x-set')
     end
     schema = {
       'oneOf' => [
@@ -698,8 +795,12 @@ class HooksTest < Minitest::Test
         { 'properties' => { 'kind' => { 'const' => 'b' }, 'y' => { 'x-set' => 2 } } }
       ]
     }
-    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, before_property_value_validation: [set])
-    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, after_property_value_validation: [set])
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, before_value_validation: [set])
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, after_value_validation: [set])
+
+    # array items: only changes for matching `contains` items are kept
+    schema = { 'contains' => { 'x-set' => 'matched', 'type' => 'string' } }
+    assert_isolated(schema, ['a', 1], true, ['matched', 1], after_value_validation: [set])
   end
 
   def test_keyword_order_can_put_properties_first
@@ -708,11 +809,10 @@ class HooksTest < Minitest::Test
       'then' => { 'required' => ['approval'] },
       'properties' => ORDER_SCHEMA.fetch('properties').merge('approval' => { 'type' => 'string' })
     )
-    options = { before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT], before_property_value_validation: [COMPUTE] }
     data = { 'items' => [{ 'price' => 60 }] }
 
     # `if` is evaluated before `properties`, so it doesn't see the computed total
-    assert(JSONSchemer.schema(schema, **options).valid?(Marshal.load(Marshal.dump(data))))
+    assert(JSONSchemer.schema(schema, **ORDER_HOOKS).valid?(Marshal.load(Marshal.dump(data))))
 
     meta_schema = JSONSchemer::Schema.new(
       JSONSchemer::Draft202012::SCHEMA,
@@ -728,7 +828,7 @@ class HooksTest < Minitest::Test
     keywords.insert(keywords.index('allOf'), 'properties')
     meta_schema.keyword_order = keywords.each_with_index.to_h
 
-    schemer = JSONSchemer.schema(schema, meta_schema: meta_schema, **options)
+    schemer = JSONSchemer.schema(schema, meta_schema: meta_schema, **ORDER_HOOKS)
     assert_equal('properties', schemer.parsed.keys.find { |keyword| ['properties', 'if'].include?(keyword) })
     refute(schemer.valid?(Marshal.load(Marshal.dump(data))))
     assert(schemer.valid?(data.merge('approval' => 'yes')))
@@ -745,28 +845,40 @@ class HooksTest < Minitest::Test
       'definitions' => { 'base' => { 'properties' => { 'used' => {} } } }
     }
     hooks = {
+      before_object_validation: [log],
       before_property_validation: [log],
-      before_property_value_validation: [log],
-      after_property_value_validation: [log],
-      after_property_validation: [log]
+      before_value_validation: [log],
+      after_value_validation: [log],
+      after_property_validation: [log],
+      deferred_value_validation: [log]
     }
 
     assert(JSONSchemer.schema(schema, meta_schema: JSONSchemer.draft7, **hooks).valid?({}))
-    assert_equal(['used'] * 4, calls)
+    assert_equal(['used'] * 6, calls)
 
     calls.clear
     assert(JSONSchemer.schema(schema, meta_schema: JSONSchemer.draft202012, **hooks).valid?({}))
-    # root before validation, `$ref` (before validation and the `properties` loop), root `properties` loop, after validation
-    assert_equal(['ignored', 'used', 'used', 'used', 'ignored', 'ignored', 'used', 'ignored'], calls)
+    # root `before_object_validation`, `$ref` (all but deferred), root `properties`, deferred
+    assert_equal(['ignored'] + ['used'] * 5 + ['ignored'] * 4 + ['used', 'ignored'], calls)
   end
 
-  def test_before_property_validation_runs_once
+  def test_insert_property_default_hook_ignores_array_items
+    schema = { 'items' => { 'default' => 1 }, 'properties' => { 'a' => { 'default' => 2 } } }
+    data = [nil]
+    assert(JSONSchemer.schema(schema, before_value_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?(data))
+    assert_equal([nil], data)
+    data = {}
+    assert(JSONSchemer.schema(schema, before_value_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?(data))
+    assert_equal({ 'a' => 2 }, data)
+  end
+
+  def test_before_object_validation_runs_once
     calls = Hash.new(0)
-    counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }
+    counter = proc { |_data, key| calls[key] += 1 }
     schema = { 'properties' => { 'a' => { 'default' => 1 }, 'b' => { 'type' => 'integer' } }, 'required' => ['a'] }
 
     data = {}
-    assert(JSONSchemer.schema(schema, before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, counter]).valid?(data))
+    assert(JSONSchemer.schema(schema, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, counter]).valid?(data))
     assert_equal({ 'a' => 1 }, data)
     assert_equal({ 'a' => 1, 'b' => 1 }, calls)
   end

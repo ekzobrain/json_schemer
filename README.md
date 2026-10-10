@@ -199,41 +199,31 @@ JSONSchemer.schema(
     end
   },
 
-  # insert default property values during validation
+  # insert default property values after validation (and validate again)
+  # see "Default Values" below for a single pass alternative
   # string keys by default (use `:symbol` to insert symbol keys)
   # true/false/:symbol
   # default: false
   insert_property_defaults: true,
 
-  # modify properties before an object is validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
-  # `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` inserts `default` values in a single validation pass
+  # hooks to inspect and modify data during validation (see "Hooks" below)
   # Proc/[Proc]
-  # default: nil
+  # default: []
+  before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT],
   before_property_validation: proc do |data, property, property_schema, _parent|
     data[property] ||= 42
   end,
-
-  # modify properties after the whole instance is validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
-  # Proc/[Proc]
-  # default: nil
+  before_value_validation: proc do |data, key, schema, _parent_schema, _location|
+    data[key] = data.fetch('items').sum { |item| item.fetch('subtotal') } if schema.value.is_a?(Hash) && schema.value['x-computed'] == 'total'
+  end,
+  after_value_validation: proc do |data, key, _schema, _parent_schema, _location|
+    data[key] = data[key].strip if data[key].is_a?(String)
+  end,
   after_property_validation: proc do |data, property, property_schema, _parent|
-    data[property] = Date.iso8601(data[property]) if property_schema.is_a?(Hash) && property_schema['format'] == 'date'
+    data[property] = data[property].downcase if data[property].is_a?(String) && property_schema.is_a?(Hash) && property_schema['format'] == 'email'
   end,
-
-  # modify each property right before its value is validated, after previous properties (and objects nested in them)
-  # are validated (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
-  # Proc/[Proc]
-  # default: nil
-  before_property_value_validation: proc do |data, property, property_schema, _parent|
-    data[property] = data.fetch('items').sum { |item| item.fetch('subtotal') } if property == 'total'
-  end,
-
-  # modify each property right after its value is validated; later properties and keywords see the changes
-  # (see "Property Hooks" below). You can pass one Proc or a list of Procs to modify data.
-  # Proc/[Proc]
-  # default: nil
-  after_property_value_validation: proc do |data, property, property_schema, _parent|
-    data[property] = data[property].strip if data[property].is_a?(String)
+  deferred_value_validation: proc do |data, key, schema, _parent_schema, _location|
+    data[key] = Date.iso8601(data[key]) if data[key].is_a?(String) && schema.value.is_a?(Hash) && schema.value['format'] == 'date'
   end,
 
   # resolve external references
@@ -269,75 +259,258 @@ JSONSchemer.schema(
 )
 ```
 
-## Property Hooks
+## Hooks
 
-Property hooks are called for every property listed in a schema's `properties`, whether or not it is present in the data, with:
+Hooks are procs (or anything responding to `call`) that are called while data is validated, to inspect or modify it: insert default values, compute values, convert types, collect locations of values, etc. Each option takes one hook or a list of hooks, which are called in the order given.
 
-1. `data`: the object being validated
-2. `property`: the property name
-3. `property_schema`: the property's schema (as given, references not resolved)
-4. `parent_schema`: the schema containing `properties`
-5. `instance_location`: JSON pointer of `data` in the validated instance (eg `/items/3`)
-6. `subschema`: the property's `JSONSchemer::Schema`, eg to resolve references (`subschema.parsed['$ref'].ref_schema`) or get its location (`subschema.schema_pointer`)
-
-Hooks of each kind are called in the order given. Procs can ignore trailing arguments, but lambdas and methods must accept all six. There are four kinds, called at different times while an object is validated:
+There are six hooks, called at different times while an object or array is validated:
 
 | Hook | Called | Changes are seen by |
 | --- | --- | --- |
-| `before_property_validation` | when validation of a schema with `properties` starts, for all properties at once | all keywords of the schema (`$ref`, `oneOf`, `if`, `properties`, `required`, ...) |
-| `before_property_value_validation` | in `properties`, right before each property's value is validated: previous properties, and objects nested in them, are already validated and processed by hooks | the property's value validation and keywords evaluated after `properties` (`required`, `dependentRequired`, `additionalProperties`, `unevaluatedProperties`, `enum`, ...) |
-| `after_property_value_validation` | in `properties`, right after each property's value is validated | later properties and keywords evaluated after `properties` |
-| `after_property_validation` | once the whole instance is validated (nested objects before their parents) | no keyword: eg converting a `format: date` string to a `Date` doesn't fail a `type: string` in `patternProperties`, another `allOf` subschema or a parent's `enum` |
+| `before_object_validation` | before any keyword of a schema with `properties` validates an object | all keywords of the schema |
+| `before_property_validation` | in `properties`, before property values are validated | `properties` and keywords evaluated after it |
+| `before_value_validation` | before each value in an object or array is validated, once previous values (and everything nested in them) are | the value's validation, later values and keywords evaluated after the current one |
+| `after_value_validation` | after each value in an object or array is validated | later values and keywords evaluated after the current one |
+| `after_property_validation` | in `properties`, after property values are validated | keywords evaluated after `properties`, other subschemas and parent schemas |
+| `deferred_value_validation` | after the whole instance is validated, for each value in an object or array that was validated | nothing (validation is done) |
 
-For example, with this schema:
+For example, with:
 
 ```ruby
-{
+schema = {
   'properties' => {
     'items' => { 'items' => { 'properties' => { 'price' => {}, 'quantity' => {}, 'subtotal' => {} } } },
     'total' => {}
   }
 }
+data = { 'items' => [{ 'price' => 10, 'quantity' => 2 }] }
 ```
 
-hooks are called in this order: `before_property_validation` for `items` and `total`, `before_property_value_validation` for `items`, then for each item: `before_property_validation` for `price`, `quantity` and `subtotal`, and `before_property_value_validation`/`after_property_value_validation` for each of them in turn; then `after_property_value_validation` for `items`, `before_property_value_validation` and `after_property_value_validation` for `total` and finally `after_property_validation` for all properties (items first). So a `before_property_value_validation` hook can compute `subtotal` from the item's `price` and `quantity`, and `total` from all `subtotal`s.
+hooks are called in this order (`data`: key):
 
-In schemas where `$ref` overrides sibling keywords (draft 7 and earlier), hooks only run for the referenced schema's `properties`.
+1. `before_object_validation`, `before_property_validation`: root `items`, `total`
+2. `before_value_validation`: root `items`
+    1. `before_value_validation`: `items` index `0`
+        1. `before_object_validation`, `before_property_validation`: item `price`, `quantity`, `subtotal`
+        2. `before_value_validation`, `after_value_validation`: item `price`, then `quantity`, then `subtotal`
+        3. `after_property_validation`: item `price`, `quantity`, `subtotal`
+    2. `after_value_validation`: `items` index `0`
+3. `after_value_validation`: root `items`
+4. `before_value_validation`, `after_value_validation`: root `total`
+5. `after_property_validation`: root `items`, `total`
+6. `deferred_value_validation`: item `price`, `quantity`, `subtotal`, `items` index `0`, root `items`, `total`
 
-Subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` are only tried, so hooks run while trying them are applied in a transaction: every subschema sees the same data, and changes (and `after_property_validation` calls) are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, hooks must only assign properties of the `data` they're given (`data[property] = value`) rather than modify nested objects in place.
+### Arguments
 
-`JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` is a `before_property_validation` hook that inserts `default` values of missing properties (deep copied). Unlike `insert_property_defaults`, it inserts defaults before validation instead of re-validating the instance afterwards, so hooks run only once. Combined with a hook that computes values, defaults are available to the computation:
+`before_property_validation` and `after_property_validation` are called for every property listed in `properties` with:
+
+1. `data`: the object being validated
+2. `property`: the property name
+3. `property_schema`: the property's schema (`Hash`/`true`/`false` as given, references not resolved)
+4. `parent_schema`: the schema containing `properties` (as given)
+5. `instance_location`: JSON pointer of `data` in the instance (eg `/items/3`)
+6. `subschema`: the property's `JSONSchemer::Schema`
+
+The other hooks are called with:
+
+1. `data`: the object or array being validated
+2. `key`: the property name or the array index (`Integer`)
+3. `schema`: the `JSONSchemer::Schema` the value is validated with. `schema.value` is the schema as given; the object also resolves references (`schema.parsed['$ref'].ref_schema`), finds defaults behind them (`schema.default_keyword_instance`) and knows its location (`schema.schema_pointer`)
+4. `parent_schema`: the `JSONSchemer::Schema` containing the keyword (eg `properties` or `items`)
+5. `location`: JSON pointer of `data` in the instance (eg `/items/3`); the value is at `"#{location}/#{key}"`
+
+Hooks only get as many arguments as they accept, so lambdas and methods can take fewer (eg the original four property hook arguments).
+
+### `before_object_validation`
+
+Called when a schema with `properties` starts validating an object, before any of its keywords (including `$ref`, `allOf`, `oneOf`, `if`, `dependentSchemas` and `required`), for every property listed in `properties`, whether or not it is present. Use it to insert default values (see "Default Values" below) and values that only depend on the object itself, so that all keywords see them:
 
 ```ruby
-compute = proc do |data, property, property_schema, _parent|
-  data[property] = data.fetch('price') * data.fetch('quantity') if property_schema.is_a?(Hash) && property_schema['x-computed'] == 'total'
+kind_default = proc do |data, key, schema|
+  data[key] = 'person' if key == 'kind' && !data.key?(key)
 end
 
 schemer = JSONSchemer.schema(
   {
-    'type' => 'object',
-    'properties' => {
-      'price' => { 'type' => 'number' },
-      'quantity' => { 'type' => 'integer', 'default' => 1 },
-      'total' => { 'type' => 'number', 'maximum' => 100, 'x-computed' => 'total' }
-    },
-    'required' => ['price', 'total']
+    'properties' => { 'kind' => { 'enum' => ['person', 'company'] }, 'name' => {}, 'inn' => {} },
+    'if' => { 'properties' => { 'kind' => { 'const' => 'company' } } },
+    'then' => { 'required' => ['inn'] },
+    'else' => { 'required' => ['name'] }
   },
-  before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT, compute]
+  before_object_validation: [kind_default]
 )
 
-data = { 'price' => 10 }
+schemer.valid?({ 'inn' => '1' })
+# => false (`kind` is "person", so `name` is required)
+```
+
+### `before_property_validation`
+
+Called in `properties` before property values are validated, for every property listed in it, whether or not it is present. Keywords evaluated before `properties` (`$ref`, `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `dependentSchemas`, array keywords) don't see the changes; `properties` and the keywords after it (`patternProperties`, `additionalProperties`, `required`, `dependentRequired`, `enum`, ...) do:
+
+```ruby
+parse_list = proc do |data, property, property_schema, _parent|
+  data[property] = data[property].split(',') if data[property].is_a?(String) && property_schema.is_a?(Hash) && property_schema['type'] == 'array'
+end
+
+data = { 'tags' => 'a,b' }
+JSONSchemer.schema({ 'properties' => { 'tags' => { 'type' => 'array' } } }, before_property_validation: [parse_list]).valid?(data)
+# => true
+data
+# => {"tags"=>["a", "b"]}
+```
+
+### `before_value_validation`
+
+Called right before each value in an object or array is validated. By then, previous values (and everything nested in them) are validated and processed by hooks, so a value can be computed from them. It's called for values of:
+
+- `properties`: every property listed, whether or not it is present (so values can be inserted)
+- `patternProperties`, `additionalProperties`, `unevaluatedProperties`: present properties
+- `prefixItems`, `items`, `additionalItems`, `unevaluatedItems`, `contains`: present items
+
+For example, an order total computed from its items' subtotals, which are computed from their price and quantity:
+
+```ruby
+compute = proc do |data, key, schema|
+  case schema.value.is_a?(Hash) && schema.value['x-computed']
+  when 'subtotal'
+    data[key] = data.fetch('price') * data.fetch('quantity')
+  when 'total'
+    data[key] = data.fetch('items').sum { |item| item.fetch('subtotal') }
+  end
+end
+
+schemer = JSONSchemer.schema(
+  {
+    'properties' => {
+      'items' => {
+        'items' => {
+          'properties' => {
+            'price' => { 'type' => 'integer' },
+            'quantity' => { 'type' => 'integer', 'default' => 1 },
+            'subtotal' => { 'x-computed' => 'subtotal' }
+          }
+        }
+      },
+      'total' => { 'type' => 'integer', 'maximum' => 100, 'x-computed' => 'total' }
+    },
+    'required' => ['total']
+  },
+  before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT],
+  before_value_validation: [compute]
+)
+
+data = { 'items' => [{ 'price' => 10 }, { 'price' => 20, 'quantity' => 2 }] }
 schemer.valid?(data)
 # => true
 data
-# => {"price"=>10, "quantity"=>1, "total"=>10}
+# => {"items"=>[{"price"=>10, "quantity"=>1, "subtotal"=>10}, {"price"=>20, "quantity"=>2, "subtotal"=>40}], "total"=>50}
 ```
 
-Like `insert_property_defaults`, it looks up defaults behind `$ref`, `$dynamicRef` and `$recursiveRef` (using the `subschema` argument; called from another hook with only four arguments, it uses `default` in the given property schema). The two differ when subschemas define different defaults for the same property: `insert_property_defaults` skips conflicting defaults, while the hook inserts the first one that applies (in keyword evaluation order) and later subschemas validate it.
+Keywords evaluated before the one validating the value (eg `if` and `oneOf` before `properties`) don't see the changes; see "Keyword Order" below to change that.
+
+### `after_value_validation`
+
+Called right after each value in an object or array is validated, for the same values as `before_value_validation`. Later values and keywords evaluated after the current one see the changes:
+
+```ruby
+strip = proc do |data, key|
+  data[key] = data[key].strip if data[key].is_a?(String)
+end
+
+data = { 'name' => ' Bob ' }
+JSONSchemer.schema({ 'properties' => { 'name' => {} }, 'enum' => [{ 'name' => 'Bob' }] }, after_value_validation: [strip]).valid?(data)
+# => true
+data
+# => {"name"=>"Bob"}
+```
+
+### `after_property_validation`
+
+Called in `properties` after property values are validated, for every property listed in it, whether or not it is present. Keywords evaluated after `properties`, other subschemas validating the same object (eg in `allOf`) and parent schemas see the changes. That makes it unsuitable for type conversions: a value converted to a `Date` fails a `type: string` validated later. Use `deferred_value_validation` for those.
+
+```ruby
+normalize_email = proc do |data, property, property_schema, _parent|
+  data[property] = data[property].downcase if data[property].is_a?(String) && property_schema.is_a?(Hash) && property_schema['format'] == 'email'
+end
+```
+
+### `deferred_value_validation`
+
+Called once the whole instance is validated, for each value in an object or array that was validated (the same values as `before_value_validation`), in validation order: nested values before the values containing them. No keyword sees the changes, so values can be converted to other types, and locations of values can be collected:
+
+```ruby
+dates = []
+convert_dates = proc do |data, key, schema, _parent_schema, location|
+  if data[key].is_a?(String) && schema.value.is_a?(Hash) && schema.value['format'] == 'date'
+    dates << "#{location}/#{key}"
+    data[key] = Date.iso8601(data[key])
+  end
+end
+
+schemer = JSONSchemer.schema(
+  {
+    'properties' => {
+      'start' => { 'type' => 'string', 'format' => 'date' },
+      'holidays' => { 'items' => { 'type' => 'string', 'format' => 'date' } }
+    },
+    'patternProperties' => { '^start$' => { 'type' => 'string' } }
+  },
+  deferred_value_validation: [convert_dates]
+)
+
+data = { 'start' => '2020-09-03', 'holidays' => ['2020-12-25'] }
+schemer.valid?(data)
+# => true
+data
+# => {"start"=>#<Date: 2020-09-03>, "holidays"=>[#<Date: 2020-12-25>]}
+dates
+# => ["/start", "/holidays/0"]
+```
+
+Values validated by several schemas (here `start` by `properties` and `patternProperties`) get a call from each, with that schema, so hooks should handle values they already processed: here the second call for `start` gets a `Date` and skips it.
+
+### Subschemas That Don't Apply
+
+Subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` are only tried, so hooks called while trying them are applied in a transaction: every subschema sees the same data, and changes and `deferred_value_validation` calls are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, hooks must only assign values of the object or array they're given (`data[key] = value`) rather than modify nested objects in place.
+
+### Repeated Calls
+
+Hooks are called by the keywords validating a value, so a value validated by several schemas (eg in `allOf`, `$ref` next to `properties`, or `properties` and `patternProperties`) gets a call from each, with that schema. Hooks should be idempotent, eg not convert a value that's already converted.
+
+In schemas where `$ref` overrides sibling keywords (draft 7 and earlier), hooks only run for the referenced schema.
+
+### Default Values
+
+There are two ways to insert `default` values of missing properties:
+
+- `insert_property_defaults: true` (or `:symbol` to insert symbol keys): after the instance is validated, defaults are inserted where the subschemas that define them were valid, and the instance is validated again, so validation and hooks run twice. When subschemas define different defaults for the same property, none is inserted.
+- `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` hook, recommended in `before_object_validation`: defaults are inserted before the object is validated, so every keyword (`$ref`, `oneOf`, `if`, `required`, ...) sees them, in a single validation pass. Defaults from subschemas that don't apply (eg `oneOf` branches) are rolled back. When subschemas define different defaults for the same property, the first one that applies (in keyword evaluation order) is inserted and the others validate it. Defaults are deep copied and found behind `$ref`, `$dynamicRef` and `$recursiveRef` like with `insert_property_defaults`.
+
+```ruby
+schemer = JSONSchemer.schema(
+  {
+    'properties' => { 'kind' => { 'default' => 'a' } },
+    'oneOf' => [
+      { 'properties' => { 'kind' => { 'const' => 'a' } }, 'required' => ['kind'] },
+      { 'properties' => { 'kind' => { 'const' => 'b' } }, 'required' => ['kind'] }
+    ]
+  },
+  before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]
+)
+
+data = {}
+schemer.valid?(data)
+# => true
+data
+# => {"kind"=>"a"}
+```
+
+The hook also works in `before_property_validation` and `before_value_validation`, but keywords evaluated before `properties` (like `oneOf` above) don't see the defaults then.
 
 ### Keyword Order
 
-Keywords of a schema are evaluated in a fixed order: `$ref` and other core keywords first, then applicators (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `dependentSchemas`, array keywords, `properties`, `patternProperties`, `additionalProperties`, ...), then validation keywords (`type`, `enum`, `required`, ...) and `unevaluatedItems`/`unevaluatedProperties`. The order doesn't change validation results, but it decides which keywords see changes made by `before_property_value_validation` and `after_property_value_validation` hooks: by default `allOf`, `anyOf`, `oneOf`, `if` and `dependentSchemas` are evaluated before `properties`, so they don't see values computed there.
+Keywords of a schema are evaluated in a fixed order: `$ref` and other core keywords first, then applicators (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `dependentSchemas`, array keywords, `properties`, `patternProperties`, `additionalProperties`, ...), then validation keywords (`type`, `enum`, `required`, ...) and `unevaluatedItems`/`unevaluatedProperties`. The order doesn't change validation results, but it decides which keywords see changes made by `before_property_validation`, `before_value_validation`, `after_value_validation` and `after_property_validation` hooks: by default `allOf`, `anyOf`, `oneOf`, `if` and `dependentSchemas` are evaluated before `properties`, so they don't see values computed there.
 
 The order comes from the meta schema's `keyword_order` (keyword => position) and is applied when schemas are parsed. To evaluate `properties` before other applicators, change it in a meta schema before creating schemas:
 

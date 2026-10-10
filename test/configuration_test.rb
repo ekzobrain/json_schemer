@@ -137,17 +137,33 @@ class ConfigurationTest < Minitest::Test
     )
   end
 
-  def test_before_property_value_validation
+  def test_before_object_validation
     run_configuration_test(
-      :before_property_value_validation,
+      :before_object_validation,
       default: [],
       test: ['something']
     )
   end
 
-  def test_after_property_value_validation
+  def test_before_value_validation
     run_configuration_test(
-      :after_property_value_validation,
+      :before_value_validation,
+      default: [],
+      test: ['something']
+    )
+  end
+
+  def test_after_value_validation
+    run_configuration_test(
+      :after_value_validation,
+      default: [],
+      test: ['something']
+    )
+  end
+
+  def test_deferred_value_validation
+    run_configuration_test(
+      :deferred_value_validation,
       default: [],
       test: ['something']
     )

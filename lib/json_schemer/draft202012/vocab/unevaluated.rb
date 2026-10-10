@@ -27,8 +27,11 @@ module JSONSchemer
 
             valid = true
             nested = []
+            value_data = value_hooks_data(instance, instance_location, context)
             unevaluated_items.each do |index|
-              nested_result = parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+              nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+              end
               valid &&= nested_result.valid
               nested << nested_result
             end
@@ -80,9 +83,13 @@ module JSONSchemer
             valid = true
             nested = []
             evaluated = []
-            instance.each do |key, value|
+            value_data = value_hooks_data(instance, instance_location, context)
+            # hooks can change the instance, so iterate over a copy of its keys
+            (value_data ? instance.keys : instance).each do |key, _value|
               next if evaluated_keys.include?(key)
-              nested_result = parsed.validate_instance(value, join_location(instance_location, key), keyword_location, context)
+              nested_result = validate_value(value_data, instance, key, parsed, instance_location, context) do
+                parsed.validate_instance(instance.fetch(key), join_location(instance_location, key), keyword_location, context)
+              end
               valid &&= nested_result.valid
               nested << nested_result
               evaluated << key

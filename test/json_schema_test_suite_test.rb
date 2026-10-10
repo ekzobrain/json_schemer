@@ -125,10 +125,12 @@ class JSONSchemaTestSuiteTest < Minitest::Test
   def test_json_schema_test_suite_with_property_hooks_and_stringified_keys
     noop = proc { |_data, _property, _property_schema, _parent| }
     hooks = {
+      :before_object_validation => [noop],
       :before_property_validation => [noop],
-      :before_property_value_validation => [noop],
-      :after_property_value_validation => [noop],
-      :after_property_validation => [noop]
+      :before_value_validation => [noop],
+      :after_value_validation => [noop],
+      :after_property_validation => [noop],
+      :deferred_value_validation => [noop]
     }
     modes = {
       'hooks' => hooks,
