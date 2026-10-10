@@ -339,13 +339,34 @@ module JSONSchemer
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
+            before_value_hooks = root.before_property_value_validation
+            after_value_hooks = root.after_property_value_validation
+            if before_value_hooks.any? || after_value_hooks.any?
+              original_instance = caller_instance(instance, instance_location, context)
+              context.record_change(original_instance)
+              context.record_change(instance)
+              resolved_instance_location = Location.resolve(instance_location)
+            end
+
             evaluated_keys = []
             nested = []
 
             parsed.each do |property, subschema|
+              # called for each property in turn, so previous properties (and objects nested in them) are already
+              # validated and processed by hooks
+              if before_value_hooks.any?
+                before_value_hooks.each { |hook| call_hook(hook, original_instance, property, subschema, resolved_instance_location) }
+                sync_instance(instance, original_instance, context)
+              end
+
               if instance.key?(property)
                 evaluated_keys << property
                 nested << subschema.validate_instance(instance.fetch(property), join_location(instance_location, property), join_location(keyword_location, property), context)
+              end
+
+              if after_value_hooks.any?
+                after_value_hooks.each { |hook| call_hook(hook, original_instance, property, subschema, resolved_instance_location) }
+                sync_instance(instance, original_instance, context)
               end
             end
 
@@ -363,14 +384,18 @@ module JSONSchemer
             resolved_instance_location = Location.resolve(instance_location)
             hooks.each do |hook|
               parsed.each do |property, subschema|
-                hook.call(data, property, subschema.value, schema.value, resolved_instance_location, subschema)
+                call_hook(hook, data, property, subschema, resolved_instance_location)
               end
             end
           end
 
+          def call_hook(hook, data, property, subschema, resolved_instance_location)
+            hook.call(data, property, subschema.value, schema.value, resolved_instance_location, subschema)
+          end
+
           def valid_instance?(instance, context)
             return true unless instance.is_a?(Hash)
-            return nil if root.before_property_validation.any? || root.after_property_validation.any?
+            return nil if root.property_hooks?
 
             parsed.each do |property, subschema|
               next unless instance.key?(property)

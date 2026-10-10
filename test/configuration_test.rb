@@ -137,6 +137,22 @@ class ConfigurationTest < Minitest::Test
     )
   end
 
+  def test_before_property_value_validation
+    run_configuration_test(
+      :before_property_value_validation,
+      default: [],
+      test: ['something']
+    )
+  end
+
+  def test_after_property_value_validation
+    run_configuration_test(
+      :after_property_value_validation,
+      default: [],
+      test: ['something']
+    )
+  end
+
   def test_insert_property_defaults
     run_configuration_test(
       :insert_property_defaults,

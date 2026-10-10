@@ -4,8 +4,9 @@ module JSONSchemer
     Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls) do
       # Property hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`)
       # run in a transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
-      # - hashes are recorded (shallow copy) before `before_property_validation` hooks change them and are restored
-      #   afterwards (hooks must only assign properties of the hash they're given for this to work);
+      # - hashes are recorded (shallow copy) before `before_property_validation`, `before_property_value_validation` and
+      #   `after_property_value_validation` hooks change them and are restored afterwards (hooks must only assign
+      #   properties of the hash they're given for this to work);
       # - `after_property_validation` hook calls are deferred until the whole instance is validated (so no keyword
       #   sees their changes) and dropped with failed attempts.
       # `transactions` is nil when there are no hooks, which turns all of this off.
@@ -129,7 +130,7 @@ module JSONSchemer
 
     attr_accessor :base_uri, :meta_schema, :keywords, :keyword_order
     attr_reader :value, :parent, :root, :configuration, :parsed
-    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_property_validation, :after_property_validation, :insert_property_defaults
+    def_delegators :@configuration, :vocabulary, :format, :formats, :content_encodings, :content_media_types, :before_property_validation, :after_property_validation, :before_property_value_validation, :after_property_value_validation, :insert_property_defaults
     def_delegator :@configuration, :keywords, :custom_keywords
 
     def initialize(
@@ -148,6 +149,8 @@ module JSONSchemer
       keywords: configuration.keywords,
       before_property_validation: configuration.before_property_validation,
       after_property_validation: configuration.after_property_validation,
+      before_property_value_validation: configuration.before_property_value_validation,
+      after_property_value_validation: configuration.after_property_value_validation,
       insert_property_defaults: configuration.insert_property_defaults,
       property_default_resolver: configuration.property_default_resolver,
       ref_resolver: configuration.ref_resolver,
@@ -175,6 +178,8 @@ module JSONSchemer
         :keywords => keywords,
         :before_property_validation => Array(before_property_validation),
         :after_property_validation => Array(after_property_validation),
+        :before_property_value_validation => Array(before_property_value_validation),
+        :after_property_value_validation => Array(after_property_value_validation),
         :insert_property_defaults => insert_property_defaults,
         :property_default_resolver => property_default_resolver,
         :ref_resolver => ref_resolver,
@@ -206,6 +211,11 @@ module JSONSchemer
       output = result.output(output_format)
       resolve_enumerators!(output) if resolve_enumerators
       output
+    end
+
+    def property_hooks?
+      before_property_validation.any? || after_property_validation.any? ||
+        before_property_value_validation.any? || after_property_value_validation.any?
     end
 
     def valid_schema?(**options)
@@ -545,10 +555,6 @@ module JSONSchemer
 
     def root_keyword_location
       @root_keyword_location ||= Location.root
-    end
-
-    def property_hooks?
-      before_property_validation.any? || after_property_validation.any?
     end
 
     def property_default_resolver

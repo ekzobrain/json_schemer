@@ -124,10 +124,16 @@ class JSONSchemaTestSuiteTest < Minitest::Test
   # validation results.
   def test_json_schema_test_suite_with_property_hooks_and_stringified_keys
     noop = proc { |_data, _property, _property_schema, _parent| }
+    hooks = {
+      :before_property_validation => [noop],
+      :before_property_value_validation => [noop],
+      :after_property_value_validation => [noop],
+      :after_property_validation => [noop]
+    }
     modes = {
-      'hooks' => { :before_property_validation => [noop], :after_property_validation => [noop] },
+      'hooks' => hooks,
       'stringified_keys' => { :stringified_keys => true },
-      'hooks and stringified_keys' => { :before_property_validation => [noop], :after_property_validation => [noop], :stringified_keys => true }
+      'hooks and stringified_keys' => hooks.merge(:stringified_keys => true)
     }
 
     DRAFTS.each do |draft, meta_schema|

@@ -592,6 +592,174 @@ class HooksTest < Minitest::Test
     assert_equal([nil, 'a + b'], expressions)
   end
 
+  def test_property_value_hooks_timing
+    calls = []
+    log = proc do |name|
+      proc { |_data, property, _property_schema, _parent_schema, instance_location| calls << [name, instance_location, property] }
+    end
+    schemer = JSONSchemer.schema(
+      { 'properties' => { 'a' => { 'properties' => { 'x' => {} } }, 'b' => {} } },
+      before_property_validation: [log.call('before')],
+      before_property_value_validation: [log.call('before_value')],
+      after_property_value_validation: [log.call('after_value')],
+      after_property_validation: [log.call('after')]
+    )
+    assert(schemer.valid?({ 'a' => { 'x' => 1 }, 'b' => 2 }))
+    assert_equal(
+      [
+        ['before', '', 'a'], ['before', '', 'b'],
+        ['before_value', '', 'a'],
+        ['before', '/a', 'x'], ['before_value', '/a', 'x'], ['after_value', '/a', 'x'],
+        ['after_value', '', 'a'],
+        ['before_value', '', 'b'], ['after_value', '', 'b'],
+        ['after', '/a', 'x'], ['after', '', 'a'], ['after', '', 'b']
+      ],
+      calls
+    )
+  end
+
+  COMPUTE = proc do |data, property, property_schema, _parent_schema, _instance_location, _subschema|
+    case property_schema.is_a?(Hash) && property_schema['x-computed']
+    when 'subtotal'
+      data[property] = data.fetch('price') * data.fetch('quantity')
+    when 'total'
+      data[property] = data.fetch('items').sum { |item| item.fetch('subtotal') }
+    end
+  end
+
+  ORDER_SCHEMA = {
+    'type' => 'object',
+    'properties' => {
+      'items' => {
+        'type' => 'array',
+        'items' => {
+          'type' => 'object',
+          'properties' => {
+            'price' => { 'type' => 'integer' },
+            'quantity' => { 'type' => 'integer', 'default' => 1 },
+            'subtotal' => { 'type' => 'integer', 'x-computed' => 'subtotal' }
+          },
+          'required' => ['price', 'subtotal']
+        }
+      },
+      'total' => { 'type' => 'integer', 'maximum' => 100, 'x-computed' => 'total' }
+    },
+    'required' => ['items', 'total']
+  }.freeze
+
+  def test_before_property_value_validation_computes_values_from_validated_properties
+    options = { before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT], before_property_value_validation: [COMPUTE] }
+    assert_isolated(
+      ORDER_SCHEMA,
+      { 'items' => [{ 'price' => 10 }, { 'price' => 20, 'quantity' => 2 }] },
+      true,
+      { 'items' => [{ 'price' => 10, 'quantity' => 1, 'subtotal' => 10 }, { 'price' => 20, 'quantity' => 2, 'subtotal' => 40 }], 'total' => 50 },
+      **options
+    )
+    assert_isolated(
+      ORDER_SCHEMA,
+      { 'items' => [{ 'price' => 60, 'quantity' => 2 }] },
+      false,
+      { 'items' => [{ 'price' => 60, 'quantity' => 2, 'subtotal' => 120 }], 'total' => 120 },
+      **options
+    )
+  end
+
+  def test_after_property_value_validation_changes_are_seen_by_next_properties
+    to_date = proc do |data, property, property_schema|
+      data[property] = Date.iso8601(data[property]) if data[property].is_a?(String) && property_schema['format'] == 'date'
+    end
+    next_day = proc do |data, property, property_schema|
+      data[property] = data.fetch('start') + 1 if property_schema['x-next-day']
+    end
+    schema = {
+      'properties' => {
+        'start' => { 'type' => 'string', 'format' => 'date' },
+        'end' => { 'x-next-day' => true }
+      }
+    }
+    assert_isolated(
+      schema,
+      { 'start' => '2020-09-03' },
+      true,
+      { 'start' => Date.new(2020, 9, 3), 'end' => Date.new(2020, 9, 4) },
+      before_property_value_validation: [next_day],
+      after_property_value_validation: [to_date]
+    )
+  end
+
+  def test_property_value_hooks_changes_are_discarded_with_failed_subschema
+    set = proc do |data, property, property_schema|
+      data[property] = property_schema.fetch('x-set') if property_schema.is_a?(Hash) && property_schema.key?('x-set')
+    end
+    schema = {
+      'oneOf' => [
+        { 'properties' => { 'kind' => { 'const' => 'a' }, 'x' => { 'x-set' => 1 } }, 'required' => ['kind', 'missing'] },
+        { 'properties' => { 'kind' => { 'const' => 'b' }, 'y' => { 'x-set' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, before_property_value_validation: [set])
+    assert_isolated(schema, { 'kind' => 'b' }, true, { 'kind' => 'b', 'y' => 2 }, after_property_value_validation: [set])
+  end
+
+  def test_keyword_order_can_put_properties_first
+    schema = ORDER_SCHEMA.merge(
+      'if' => { 'properties' => { 'total' => { 'minimum' => 50 } }, 'required' => ['total'] },
+      'then' => { 'required' => ['approval'] },
+      'properties' => ORDER_SCHEMA.fetch('properties').merge('approval' => { 'type' => 'string' })
+    )
+    options = { before_property_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT], before_property_value_validation: [COMPUTE] }
+    data = { 'items' => [{ 'price' => 60 }] }
+
+    # `if` is evaluated before `properties`, so it doesn't see the computed total
+    assert(JSONSchemer.schema(schema, **options).valid?(Marshal.load(Marshal.dump(data))))
+
+    meta_schema = JSONSchemer::Schema.new(
+      JSONSchemer::Draft202012::SCHEMA,
+      base_uri: JSONSchemer::Draft202012::BASE_URI,
+      formats: JSONSchemer::Draft202012::FORMATS,
+      content_encodings: JSONSchemer::Draft202012::CONTENT_ENCODINGS,
+      content_media_types: JSONSchemer::Draft202012::CONTENT_MEDIA_TYPES,
+      ref_resolver: JSONSchemer::Draft202012::Meta::SCHEMAS.to_proc,
+      regexp_resolver: 'ecma'
+    )
+    keywords = meta_schema.keyword_order.keys
+    keywords.delete('properties')
+    keywords.insert(keywords.index('allOf'), 'properties')
+    meta_schema.keyword_order = keywords.each_with_index.to_h
+
+    schemer = JSONSchemer.schema(schema, meta_schema: meta_schema, **options)
+    assert_equal('properties', schemer.parsed.keys.find { |keyword| ['properties', 'if'].include?(keyword) })
+    refute(schemer.valid?(Marshal.load(Marshal.dump(data))))
+    assert(schemer.valid?(data.merge('approval' => 'yes')))
+    # the default order is unchanged
+    assert_equal('if', JSONSchemer.schema(schema).parsed.keys.find { |keyword| ['properties', 'if'].include?(keyword) })
+  end
+
+  def test_hooks_ignore_ref_siblings_in_draft7
+    calls = []
+    log = proc { |_data, property| calls << property }
+    schema = {
+      '$ref' => '#/definitions/base',
+      'properties' => { 'ignored' => {} },
+      'definitions' => { 'base' => { 'properties' => { 'used' => {} } } }
+    }
+    hooks = {
+      before_property_validation: [log],
+      before_property_value_validation: [log],
+      after_property_value_validation: [log],
+      after_property_validation: [log]
+    }
+
+    assert(JSONSchemer.schema(schema, meta_schema: JSONSchemer.draft7, **hooks).valid?({}))
+    assert_equal(['used'] * 4, calls)
+
+    calls.clear
+    assert(JSONSchemer.schema(schema, meta_schema: JSONSchemer.draft202012, **hooks).valid?({}))
+    # root before validation, `$ref` (before validation and the `properties` loop), root `properties` loop, after validation
+    assert_equal(['ignored', 'used', 'used', 'used', 'ignored', 'ignored', 'used', 'ignored'], calls)
+  end
+
   def test_before_property_validation_runs_once
     calls = Hash.new(0)
     counter = proc { |_data, property, _property_schema, _parent| calls[property] += 1 }

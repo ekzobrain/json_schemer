@@ -14,6 +14,8 @@
 - `after_property_validation` hooks run once the whole instance is validated, so their changes are no longer validated by later keywords, other subschemas or parent schemas.
 - `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` hook to insert defaults in a single validation pass.
 - Property hooks also receive the instance location (JSON pointer) and the property's `JSONSchemer::Schema`. Lambda and method hooks must accept six arguments.
+- `before_property_value_validation` and `after_property_value_validation` hooks, called in `properties` right before and after each property's value is validated (eg to compute a value from previous properties and the objects nested in them).
+- Documented changing keyword evaluation order with a meta schema's `keyword_order`.
 
 ## [2.5.0] - 2025-12-08
 
