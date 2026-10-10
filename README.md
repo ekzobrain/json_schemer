@@ -503,7 +503,7 @@ The hook also works in `before_property_validation` and `before_value_validation
 
 ### Keyword Order
 
-Keywords of a schema are evaluated in a fixed order: `$ref` and other core keywords first, then applicators (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `dependentSchemas`, array keywords, `properties`, `patternProperties`, `additionalProperties`, ...), then validation keywords (`type`, `enum`, `required`, ...) and `unevaluatedItems`/`unevaluatedProperties`. The order doesn't change validation results, but it decides which keywords see changes made by `before_property_validation`, `before_value_validation`, `after_value_validation` and `after_property_validation` hooks: by default `allOf`, `anyOf`, `oneOf`, `if` and `dependentSchemas` are evaluated before `properties`, so they don't see values computed there.
+Keywords of a schema are evaluated in a fixed order: `$ref` and other core keywords first, then applicators (`allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `dependentSchemas`, `prefixItems`, `items`, `contains`, `properties`, `patternProperties`, `additionalProperties`, ...), then `unevaluatedItems`/`unevaluatedProperties`, then validation keywords (`type`, `enum`, `const`, `required`, `dependentRequired`, ...), `format` and content keywords. The order doesn't change validation results, but it decides which keywords see changes made by `before_property_validation`, `before_value_validation`, `after_value_validation` and `after_property_validation` hooks: by default `allOf`, `anyOf`, `oneOf`, `if` and `dependentSchemas` are evaluated before `properties`, so they don't see values computed there.
 
 The order comes from the meta schema's `keyword_order` (keyword => position) and is applied when schemas are parsed. To evaluate `properties` before other applicators, change it in a meta schema before creating schemas:
 
@@ -532,7 +532,7 @@ properties_first(meta_schema)
 JSONSchemer.schema(schema, meta_schema: meta_schema)
 ```
 
-Other drafts have their own meta schemas (`JSONSchemer.draft201909`, `JSONSchemer.draft7`, ...). Core keywords (`$ref`, `$dynamicRef`) are evaluated before applicators and can be moved the same way. `then`/`else` must stay after `if`, `items` after `prefixItems`, `additionalProperties` after `properties`/`patternProperties` and `unevaluatedItems`/`unevaluatedProperties` last, since they use those keywords' results.
+Other drafts have their own meta schemas (`JSONSchemer.draft201909`, `JSONSchemer.draft7`, ...). Core keywords (`$ref`, `$dynamicRef`) are evaluated before applicators and can be moved the same way. `then`/`else` must stay after `if`, `items` after `prefixItems`, `additionalProperties` after `properties`/`patternProperties`, `minContains`/`maxContains` after `contains` and `unevaluatedItems`/`unevaluatedProperties` after all applicators, since they use those keywords' results.
 
 ## Global Configuration
 
