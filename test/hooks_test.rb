@@ -908,6 +908,59 @@ class HooksTest < Minitest::Test
     assert_equal({ 'a' => 2 }, data)
   end
 
+  def test_additional_properties_allows_declared_properties_set_by_hooks_later
+    late = proc { |data, key| data['total'] = data.fetch('base') * 2 if key == 'base' }
+    undeclared = proc { |data, key| data['other'] = 1 if key == 'base' }
+    schema = {
+      'properties' => { 'total' => { 'type' => 'integer' }, 'base' => { 'type' => 'integer' } },
+      'patternProperties' => { '^x-' => {} },
+      'additionalProperties' => false
+    }
+
+    [JSONSchemer.draft202012, JSONSchemer.draft201909, JSONSchemer.draft7].each do |meta_schema|
+      # `total` is set when `base` is validated, after `properties` validated (and annotated) present properties
+      assert_isolated(schema, { 'base' => 5 }, true, { 'base' => 5, 'total' => 10 }, meta_schema: meta_schema, before_value_validation: [late])
+      assert_isolated(schema, { 'base' => 5 }, true, { 'base' => 5, 'total' => 10 }, meta_schema: meta_schema, after_property_validation: [late])
+      pattern = proc { |data, key| data['x-total'] = 1 if key == 'base' }
+      assert_isolated(schema, { 'base' => 5 }, true, { 'base' => 5, 'x-total' => 1 }, meta_schema: meta_schema, before_value_validation: [pattern])
+      # undeclared properties are still additional
+      assert_isolated(schema, { 'base' => 5 }, false, { 'base' => 5, 'other' => 1 }, meta_schema: meta_schema, before_value_validation: [undeclared])
+    end
+
+    # `unevaluatedProperties` depends on which subschemas evaluated a property, so it still uses annotations
+    schema = schema.merge('unevaluatedProperties' => false).tap { |unevaluated_schema| unevaluated_schema.delete('additionalProperties') }
+    assert_isolated(schema, { 'base' => 5 }, false, { 'base' => 5, 'total' => 10 }, before_value_validation: [late])
+  end
+
+  def test_additional_properties_allows_declared_properties_set_by_later_subschemas
+    compute = proc do |data, key, schema|
+      data[key] = data.fetch('base') * 2 if schema.value.is_a?(Hash) && schema.value['x-computed'] && !data.key?(key)
+    end
+    schema = {
+      'properties' => { 'base' => { 'type' => 'integer' }, 'double' => { 'type' => 'integer' } },
+      'additionalProperties' => false,
+      'allOf' => [{ 'properties' => { 'double' => { 'type' => 'integer', 'x-computed' => true } } }]
+    }
+    meta_schema = JSONSchemer::Schema.new(
+      JSONSchemer::Draft202012::SCHEMA,
+      base_uri: JSONSchemer::Draft202012::BASE_URI,
+      formats: JSONSchemer::Draft202012::FORMATS,
+      content_encodings: JSONSchemer::Draft202012::CONTENT_ENCODINGS,
+      content_media_types: JSONSchemer::Draft202012::CONTENT_MEDIA_TYPES,
+      ref_resolver: JSONSchemer::Draft202012::Meta::SCHEMAS.to_proc,
+      regexp_resolver: 'ecma'
+    )
+    keywords = meta_schema.keyword_order.keys
+    keywords.delete('properties')
+    keywords.insert(keywords.index('allOf'), 'properties')
+    meta_schema.keyword_order = keywords.each_with_index.to_h
+
+    # `allOf` evaluated after `properties` sets `double`
+    assert_isolated(schema, { 'base' => 5 }, true, { 'base' => 5, 'double' => 10 }, meta_schema: meta_schema, before_value_validation: [compute])
+    # default order: `allOf` before `properties`
+    assert_isolated(schema, { 'base' => 5 }, true, { 'base' => 5, 'double' => 10 }, before_value_validation: [compute])
+  end
+
   def test_before_object_validation_runs_once
     calls = Hash.new(0)
     counter = proc { |_data, key| calls[key] += 1 }

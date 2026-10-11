@@ -473,6 +473,12 @@ Hooks are called by the keywords validating a value, so a value validated by sev
 
 In schemas where `$ref` overrides sibling keywords (draft 7 and earlier), hooks only run for the referenced schema.
 
+### Values Set After Their Validation
+
+A hook can set a value that its keyword has already validated, eg a `before_value_validation` hook called for one property setting another property listed before it in `properties`, an `after_property_validation` hook, or a subschema evaluated after `properties` (see "Keyword Order" below). That value isn't validated against its schema in `properties`; set values before the keyword validating them (in `before_object_validation`, or in the value's own `before_value_validation` call) to have them validated.
+
+Such a property is still allowed by `additionalProperties` when its name is in `properties` or matches a pattern in `patternProperties`: `additionalProperties` checks property names against those keywords, which the specification allows as an equivalent of using their annotations (and earlier drafts specify). `unevaluatedProperties` depends on which subschemas evaluated a property, so it reports such a property as unevaluated unless another applicable subschema evaluated it.
+
 ### Default Values
 
 There are two ways to insert `default` values of missing properties:

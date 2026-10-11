@@ -459,16 +459,13 @@ module JSONSchemer
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
-            property_keys = context.adjacent_results[Properties]&.annotation || []
-            pattern_property_keys = context.adjacent_results[PatternProperties]&.annotation || []
-
             valid = true
             nested = []
             evaluated = []
             value_data = value_hooks_data(instance, instance_location, context)
             # hooks can change the instance, so iterate over a copy of its keys
             (value_data ? instance.keys : instance).each do |key, _value|
-              next if property_keys.include?(key) || pattern_property_keys.include?(key)
+              next if declared_property?(key)
               nested_result = validate_value(value_data, instance, key, parsed, instance_location, context) do
                 parsed.validate_instance(instance.fetch(key), join_location(instance_location, key), keyword_location, context)
               end
@@ -482,18 +479,39 @@ module JSONSchemer
 
           def valid_instance?(instance, context)
             return true unless instance.is_a?(Hash)
-
-            property_keys = schema.parsed['properties']&.parsed&.keys || []
             return nil if schema.parsed.key?('patternProperties')
 
             instance.each do |key, value|
-              next if property_keys.include?(key)
+              next if declared_property?(key)
               valid = parsed.valid_instance?(value, context)
               return nil if valid.nil?
               return false unless valid
             end
 
             true
+          end
+
+          # Properties are additional unless their names are in adjacent `properties` or match a pattern in adjacent
+          # `patternProperties`. The 2019-09/2020-12 specifications define this with the annotations of those keywords
+          # (the instance properties they evaluated) and allow checking the names and patterns directly instead, which
+          # gives the same result; earlier drafts define it with the names and patterns. Unlike the annotations, the
+          # names and patterns don't depend on when a property is added to the instance, so a declared property set by
+          # a hook after `properties` ran (eg by a later property's `before_value_validation` hook) isn't reported as
+          # an additional property.
+          def declared_property?(key)
+            declared_properties.key?(key) || property_patterns.any? { |pattern| pattern.match?(key) }
+          end
+
+          def declared_properties
+            @declared_properties ||= (properties = schema.parsed['properties']).is_a?(Properties) ? properties.parsed : {}
+          end
+
+          def property_patterns
+            @property_patterns ||= if (pattern_properties = schema.parsed['patternProperties']).is_a?(PatternProperties)
+              pattern_properties.parsed.keys.map { |pattern| root.resolve_regexp(pattern) }
+            else
+              []
+            end
           end
         end
 
