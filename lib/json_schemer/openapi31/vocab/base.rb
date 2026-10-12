@@ -22,31 +22,58 @@ module JSONSchemer
 
         end
 
-        class AnyOf < Draft202012::Vocab::Applicator::AnyOf
-          def validate(*)
-            schema.parsed.key?('discriminator') ? nil : super
+        # `anyOf`/`oneOf` adjacent to `discriminator`: left to `discriminator` when it selects the schema validating the
+        # instance (`discriminator_mode: 'select'`), otherwise evaluated as usual, with only the errors of the
+        # discriminated subschema when it is invalid (`'hint'`).
+        module DiscriminatedApplicator
+          def validate(instance, instance_location, keyword_location, context)
+            discriminator = schema.parsed['discriminator']
+            return super unless discriminator
+            return if discriminator.selects_schema?
+            discriminator.discriminated_result(super, instance)
           end
 
-          def valid_instance?(_instance, _context)
-            schema.parsed.key?('discriminator') ? nil : super
+          def valid_instance?(instance, context)
+            schema.parsed['discriminator']&.selects_schema? ? nil : super
           end
         end
 
-        class OneOf < Draft202012::Vocab::Applicator::OneOf
-          def validate(*)
-            schema.parsed.key?('discriminator') ? nil : super
-          end
+        class AnyOf < Draft202012::Vocab::Applicator::AnyOf
+          include DiscriminatedApplicator
+        end
 
-          def valid_instance?(_instance, _context)
-            schema.parsed.key?('discriminator') ? nil : super
-          end
+        class OneOf < Draft202012::Vocab::Applicator::OneOf
+          include DiscriminatedApplicator
         end
 
         class Discriminator < Keyword
           # https://spec.openapis.org/oas/v3.1.0#components-object
           FIXED_FIELD_REGEX = /\A[a-zA-Z0-9\.\-_]+$\z/
+          # OpenAPI 3.0 and 3.1.0 allow the discriminator to "shortcut validation and selection of the matching schema",
+          # OpenAPI 3.1.1+ and 3.2 say it "MUST NOT change the validation outcome of the schema". `JSONSchemer.openapi`
+          # sets `discriminator_mode` by the document version.
+          DEFAULT_MODE = 'select'
 
           attr_accessor :skip_ref_once
+
+          # Whether the discriminated schema validates the instance instead of adjacent `anyOf`/`oneOf` (and a parent
+          # schema validates the discriminated child schema referencing it in `allOf`): `discriminator_mode: 'select'`.
+          # With `'hint'` the discriminator doesn't change the validation outcome and only selects the subschema whose
+          # errors are reported.
+          def selects_schema?
+            return @selects_schema if defined?(@selects_schema)
+            @selects_schema = (schema.configuration.discriminator_mode || self.class::DEFAULT_MODE) == 'select'
+          end
+
+          # Result of adjacent `anyOf`/`oneOf` with only the result of the discriminated subschema when it is invalid
+          # (`'hint'` mode).
+          def discriminated_result(keyword_result, instance)
+            return keyword_result if keyword_result.valid || !keyword_result.nested || !instance.is_a?(Hash)
+            subschema = discriminated_subschema(instance)
+            subschema_result = keyword_result.nested.find { |nested_result| nested_result.source.equal?(subschema) } if subschema
+            keyword_result.nested = [subschema_result] if subschema_result && !subschema_result.valid
+            keyword_result
+          end
 
           def error(formatted_instance_location:, **)
             "value at #{formatted_instance_location} does not match `discriminator` schema"
@@ -65,6 +92,9 @@ module JSONSchemer
               subschemas_by_schema_name = {}
 
               subschemas.each do |subschema|
+                # inline subschemas aren't considered for implicit or explicit mappings
+                next unless subschema.parsed.key?('$ref')
+
                 subschema_ref = subschema.parsed.fetch('$ref').parsed
                 subschemas_by_ref[subschema_ref] = subschema
 
@@ -91,6 +121,7 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            return unless selects_schema?
             return result(instance, instance_location, keyword_location, false) unless instance.is_a?(Hash)
 
             subschema = discriminated_subschema(instance)
@@ -108,7 +139,7 @@ module JSONSchemer
           end
 
           def valid_instance?(_instance, _context)
-            nil
+            selects_schema? ? nil : true
           end
 
         private

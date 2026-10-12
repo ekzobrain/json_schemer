@@ -240,6 +240,16 @@ JSONSchemer.schema(
   # default: false
   stringified_keys: true,
 
+  # OpenAPI `discriminator` behavior
+  # 'select': the discriminated schema validates the instance instead of adjacent `anyOf`/`oneOf` (and a parent
+  #   schema validates the discriminated child schema referencing it in `allOf`), as allowed by OpenAPI 3.0 and 3.1.0
+  # 'hint': `discriminator` doesn't change the validation outcome (OpenAPI 3.1.1+ and 3.2); invalid `anyOf`/`oneOf`
+  #   only report the errors of the discriminated schema
+  # `JSONSchemer.openapi` sets it by the document version
+  # 'select'/'hint'/nil
+  # default: nil ('hint' with the OpenAPI 3.2 dialect, 'select' otherwise)
+  discriminator_mode: 'hint',
+
   # use different method to match regexes
   # 'ruby'/'ecma'/proc/lambda/respond_to?(:call)
   # 'ruby': proc { |pattern| Regexp.new(pattern) }
@@ -745,7 +755,9 @@ In the example above, custom error messsages are looked up using the following k
 
 Documents are validated with the document schema of their version (`openapi`: `3.0.x`, `3.1.x` or `3.2.x`), so fields added in a later version are invalid in documents of an earlier one. Schemas in `components` use `jsonSchemaDialect`, or by default the dialect of the version: `https://spec.openapis.org/oas/3.2/dialect/2025-09-17` (`JSONSchemer.openapi32`) for 3.2, `https://spec.openapis.org/oas/3.1/dialect/base` (`JSONSchemer.openapi31`) for 3.1 and `JSONSchemer.openapi30` for 3.0.
 
-In OpenAPI 3.2, `discriminator` supports `defaultMapping`: the schema (a schema name or URI reference, like `mapping` values) that validates objects whose discriminating property is missing or has a value without an explicit or implicit mapping.
+`discriminator` doesn't change the validation outcome in OpenAPI 3.1.1+ and 3.2 documents ("discriminator MUST NOT change the validation outcome of the schema"): `anyOf`, `oneOf` and `allOf` are evaluated as usual, and when `anyOf`/`oneOf` are invalid only the errors of the subschema selected by the discriminating property are reported. In OpenAPI 3.0 and 3.1.0 documents, which allow the discriminator to shortcut validation, the selected schema validates the instance instead (an instance without the discriminating property or with an unmapped value is invalid). The `discriminator_mode` option overrides this.
+
+In OpenAPI 3.2, `discriminator` supports `defaultMapping`: the schema (a schema name or URI reference, like `mapping` values) selected for objects whose discriminating property is missing or has a value without an explicit or implicit mapping.
 
 ```ruby
 document = JSONSchemer.openapi({

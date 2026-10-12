@@ -5,6 +5,9 @@ module JSONSchemer
       module Base
         # https://spec.openapis.org/oas/v3.2.0#discriminator-object
         class Discriminator < OpenAPI31::Vocab::Base::Discriminator
+          # "discriminator MUST NOT change the validation outcome of the schema"
+          DEFAULT_MODE = 'hint'
+
           def default_mapping_subschema
             return @default_mapping_subschema if defined?(@default_mapping_subschema)
             default_mapping = value['defaultMapping']
@@ -14,7 +17,7 @@ module JSONSchemer
         private
 
           # Without a mapped value for the discriminating property (missing or without an explicit or implicit mapping),
-          # the instance is validated with the `defaultMapping` schema.
+          # the `defaultMapping` schema is the discriminated one.
           def discriminated_subschema(instance)
             property_name = value['propertyName']
             subschema = subschemas_by_property_value[instance.fetch(property_name)] if property_name && instance.key?(property_name)
@@ -30,7 +33,7 @@ module JSONSchemer
             refs = [schema_name_or_ref]
             refs.unshift("#/components/schemas/#{schema_name_or_ref}") if FIXED_FIELD_REGEX.match?(schema_name_or_ref)
             refs.each do |ref|
-              subschema = subschemas.find { |candidate| candidate.parsed.fetch('$ref').parsed == ref }
+              subschema = subschemas.find { |candidate| candidate.parsed['$ref']&.parsed == ref }
               return subschema if subschema
             end
             nil

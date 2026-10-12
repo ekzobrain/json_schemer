@@ -5,6 +5,7 @@ module JSONSchemer
     :before_object_validation, :before_property_validation, :before_value_validation, :after_value_validation,
     :after_property_validation, :deferred_value_validation, :insert_property_defaults, :property_default_resolver,
     :ref_resolver, :regexp_resolver, :output_format, :resolve_enumerators, :access_mode, :stringified_keys,
+    :discriminator_mode,
     keyword_init: true
   ) do
     def initialize(
@@ -29,7 +30,8 @@ module JSONSchemer
       output_format: 'classic',
       resolve_enumerators: false,
       access_mode: nil,
-      stringified_keys: false
+      stringified_keys: false,
+      discriminator_mode: nil
     )
       super
     end

@@ -191,7 +191,8 @@ module JSONSchemer
       output_format: configuration.output_format,
       resolve_enumerators: configuration.resolve_enumerators,
       access_mode: configuration.access_mode,
-      stringified_keys: configuration.stringified_keys
+      stringified_keys: configuration.stringified_keys,
+      discriminator_mode: configuration.discriminator_mode
     )
       @value = stringified_keys ? value : deep_stringify_keys(value)
       @parent = parent
@@ -222,7 +223,8 @@ module JSONSchemer
         :output_format => output_format,
         :resolve_enumerators => resolve_enumerators,
         :access_mode => access_mode,
-        :stringified_keys => stringified_keys
+        :stringified_keys => stringified_keys,
+        :discriminator_mode => discriminator_mode
       )
       @parsed = parse
     end

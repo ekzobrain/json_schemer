@@ -9,17 +9,21 @@ module JSONSchemer
       when /\A3\.2\.\d+\z/
         @document_schema = JSONSchemer.openapi32_document
         meta_schema = document.fetch('jsonSchemaDialect') { OpenAPI32::BASE_URI.to_s }
+        discriminator_mode = 'hint'
       when /\A3\.1\.\d+\z/
         @document_schema = JSONSchemer.openapi31_document
         meta_schema = document.fetch('jsonSchemaDialect') { OpenAPI31::BASE_URI.to_s }
+        # "discriminator MUST NOT change the validation outcome of the schema" since 3.1.1
+        discriminator_mode = version == '3.1.0' ? 'select' : 'hint'
       when /\A3\.0\.\d+\z/
         @document_schema = JSONSchemer.openapi30_document
         meta_schema = OpenAPI30::BASE_URI.to_s
+        discriminator_mode = 'select'
       else
         raise UnsupportedOpenAPIVersion, version
       end
 
-      @schema = JSONSchemer.schema(@document, :meta_schema => meta_schema, **options)
+      @schema = JSONSchemer.schema(@document, :meta_schema => meta_schema, :discriminator_mode => discriminator_mode, **options)
     end
 
     def valid?

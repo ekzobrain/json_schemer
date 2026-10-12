@@ -57,7 +57,7 @@ Keywords without `valid_instance?` (fall back to the general path):
 - `contentEncoding`, `contentMediaType`, `contentSchema`;
 - draft 4 `exclusiveMaximum`/`exclusiveMinimum`, draft 2019-09 `items`/`additionalItems`/`$recursiveRef`/
   `$recursiveAnchor`, draft 7 `additionalItems`;
-- OpenAPI 3.1 `anyOf`/`oneOf`/`discriminator` (return nil explicitly).
+- OpenAPI `anyOf`/`oneOf`/`discriminator` with `discriminator_mode: 'select'` (return nil explicitly).
 
 Other points:
 - `Schema#valid_instance?` allocates an `adjacent_results` hash for every schema (that's why it allocates more than the
@@ -68,21 +68,3 @@ Other points:
 - consider whether both paths are worth keeping at all if the general `flag` path gets close enough;
 - every keyword implemented on the fast path must agree with the general path: run JSON-Schema-Test-Suite through both
   (eg assert `validate_instance_boolean` == `validate(output_format: 'flag')` where the former isn't nil).
-
-## OpenAPI `discriminator`: don't change the validation outcome
-
-OpenAPI 3.1.0 allowed `discriminator` to "act as a hint to shortcut validation and selection of the matching schema",
-but 3.1.1, 3.1.2 and 3.2.0 say "discriminator MUST NOT change the validation outcome of the schema". The OpenAPI 3.1 and
-3.2 vocabularies (`OpenAPI31::Vocab::Base`, `OpenAPI32::Vocab::Base::Discriminator`) still replace `anyOf`/`oneOf`
-with the schema selected by the discriminating property, which changes the outcome:
-- `oneOf` with an instance matching several subschemas is valid if the discriminated one matches (JSON Schema: invalid);
-- an instance without the discriminating property, or with a value without a mapping (and without `defaultMapping` in
-  3.2), is invalid even if `anyOf`/`oneOf` would match;
-- with the `allOf` form, validating the parent schema validates the child schema selected by the discriminating
-  property, while the specification says the parent "does not perform a search for child schemas or use them in
-  validation in any way".
-
-Possible change: evaluate `anyOf`/`oneOf`/`allOf` as plain JSON Schema and use `discriminator` only to pick the subschema
-whose errors are reported (and as an annotation), keeping the current behavior for OpenAPI 3.1.0 / 3.0 documents or
-behind an option, since it is a breaking change for existing users. `defaultMapping` would then only affect which
-errors are reported.
