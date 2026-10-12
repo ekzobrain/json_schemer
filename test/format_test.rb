@@ -760,6 +760,16 @@ class FormatTest < Minitest::Test
     refute(schema.valid?("2020-09-0\u0663"))
   end
 
+  def test_date_time_format_rejects_leading_whitespace_and_sign
+    schema = JSONSchemer.schema({ 'format' => 'date-time' })
+    assert(schema.valid?('2020-09-03T04:05:06Z'))
+    [' ', "\t", "\n", "\v", "\f", "\r", '-', '+'].each do |prefix|
+      refute(schema.valid?("#{prefix}2020-09-03T04:05:06Z"), prefix.inspect)
+    end
+    refute(schema.valid?('-0001-09-03T04:05:06Z'))
+    refute(schema.valid?("2020-09-03T04:05:06Z\n"))
+  end
+
   def test_date_time_space_separator
     assert(JSONSchemer.schema({ 'format' => 'date-time' }).valid?('2023-11-01T23:00:00Z'))
     assert(JSONSchemer.schema({ 'format' => 'date-time' }).valid?('2023-11-01 23:00:00Z'))

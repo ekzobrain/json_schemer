@@ -69,6 +69,8 @@ module JSONSchemer
 
     # RFC 3339 full-date: 4DIGIT "-" 2DIGIT "-" 2DIGIT (`\d` only matches ASCII digits)
     FULL_DATE_REGEX = /\A(\d{4})-(\d{2})-(\d{2})\z/.freeze
+    # `DateTime.rfc3339` allows leading whitespace and a minus sign (negative years), which RFC 3339 doesn't
+    DATE_TIME_START_REGEX = /\A\d/.freeze
     DATE_TIME_OFFSET_REGEX = /(Z|[\+\-]([01][0-9]|2[0-3]):[0-5][0-9])\z/i.freeze
     DATE_TIME_SEPARATOR_CHARACTER_CLASS = '[Tt\s]'
     HOUR_24_REGEX = /#{DATE_TIME_SEPARATOR_CHARACTER_CLASS}24:/.freeze
@@ -103,6 +105,7 @@ module JSONSchemer
       end
 
       def valid_date_time?(data)
+        return false unless DATE_TIME_START_REGEX.match?(data)
         return false if HOUR_24_REGEX.match?(data)
         datetime = DateTime.rfc3339(data, Date::GREGORIAN)
         return false if LEAP_SECOND_REGEX.match?(data) && datetime.new_offset.strftime('%H:%M') != '23:59'
