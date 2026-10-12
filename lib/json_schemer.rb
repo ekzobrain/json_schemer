@@ -54,6 +54,10 @@ require 'json_schemer/openapi31/meta'
 require 'json_schemer/openapi31/vocab/base'
 require 'json_schemer/openapi31/vocab'
 require 'json_schemer/openapi31/document'
+require 'json_schemer/openapi32/meta'
+require 'json_schemer/openapi32/vocab/base'
+require 'json_schemer/openapi32/vocab'
+require 'json_schemer/openapi32/document'
 require 'json_schemer/openapi30/document'
 require 'json_schemer/openapi30/meta'
 require 'json_schemer/openapi30/vocab/base'
@@ -81,6 +85,7 @@ module JSONSchemer
     'https://json-schema.org/draft/2020-12/vocab/core' => Draft202012::Vocab::CORE,
     'https://json-schema.org/draft/2020-12/vocab/applicator' => Draft202012::Vocab::APPLICATOR,
     'https://spec.openapis.org/oas/3.1/vocab/base' => OpenAPI31::Vocab::BASE,
+    'https://spec.openapis.org/oas/3.2/vocab/base' => OpenAPI32::Vocab::BASE,
     'https://json-schema.org/draft/2020-12/vocab/unevaluated' => Draft202012::Vocab::UNEVALUATED,
     'https://json-schema.org/draft/2020-12/vocab/validation' => Draft202012::Vocab::VALIDATION,
     'https://json-schema.org/draft/2020-12/vocab/format-annotation' => Draft202012::Vocab::FORMAT_ANNOTATION,
@@ -192,6 +197,16 @@ module JSONSchemer
       )
     end
 
+    def openapi32
+      @openapi32 ||= Schema.new(
+        OpenAPI32::SCHEMA,
+        :base_uri => OpenAPI32::BASE_URI,
+        :formats => OpenAPI32::FORMATS,
+        :ref_resolver => OpenAPI32::Meta::SCHEMAS.to_proc,
+        :regexp_resolver => 'ecma'
+      )
+    end
+
     def openapi31
       @openapi31 ||= Schema.new(
         OpenAPI31::SCHEMA,
@@ -212,6 +227,14 @@ module JSONSchemer
         :base_uri => OpenAPI30::BASE_URI,
         :formats => OpenAPI30::FORMATS,
         :ref_resolver => OpenAPI30::Meta::SCHEMAS.to_proc,
+        :regexp_resolver => 'ecma'
+      )
+    end
+
+    def openapi32_document
+      @openapi32_document ||= Schema.new(
+        OpenAPI32::Document::SCHEMA_BASE,
+        :ref_resolver => OpenAPI32::Document::SCHEMAS.to_proc,
         :regexp_resolver => 'ecma'
       )
     end
@@ -283,6 +306,7 @@ module JSONSchemer
     Draft4::BASE_URI.to_s => method(:draft4),
     # version-less $schema deprecated after Draft 4
     'http://json-schema.org/schema#' => method(:draft4),
+    OpenAPI32::BASE_URI.to_s => method(:openapi32),
     OpenAPI31::BASE_URI.to_s => method(:openapi31),
     OpenAPI30::BASE_URI.to_s => method(:openapi30)
   }.freeze

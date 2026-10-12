@@ -85,25 +85,7 @@ module JSONSchemer
               implicit_mapping.merge(explicit_mapping)
             else
               Hash.new do |hash, property_value|
-                schema_name_or_ref = mapping.fetch(property_value, property_value)
-
-                subschema = nil
-
-                if FIXED_FIELD_REGEX.match?(schema_name_or_ref)
-                  subschema = begin
-                    schema.ref("#/components/schemas/#{schema_name_or_ref}")
-                  rescue InvalidRefPointer
-                    nil
-                  end
-                end
-
-                subschema ||= begin
-                  schema.ref(schema_name_or_ref)
-                rescue InvalidRefResolution, UnknownRef
-                  nil
-                end
-
-                hash[property_value] = subschema
+                hash[property_value] = resolve_schema_name_or_ref(mapping.fetch(property_value, property_value))
               end
             end
           end
@@ -111,12 +93,7 @@ module JSONSchemer
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, false) unless instance.is_a?(Hash)
 
-            property_name = value.fetch('propertyName')
-
-            return result(instance, instance_location, keyword_location, false) unless instance.key?(property_name)
-
-            property_value = instance.fetch(property_name)
-            subschema = subschemas_by_property_value[property_value]
+            subschema = discriminated_subschema(instance)
 
             return result(instance, instance_location, keyword_location, false) unless subschema
 
@@ -132,6 +109,33 @@ module JSONSchemer
 
           def valid_instance?(_instance, _context)
             nil
+          end
+
+        private
+
+          # Schema of a component (`#/components/schemas/<name>`) or else of a URI reference, or nil.
+          def resolve_schema_name_or_ref(schema_name_or_ref)
+            subschema = nil
+
+            if FIXED_FIELD_REGEX.match?(schema_name_or_ref)
+              subschema = begin
+                schema.ref("#/components/schemas/#{schema_name_or_ref}")
+              rescue InvalidRefPointer
+                nil
+              end
+            end
+
+            subschema || begin
+              schema.ref(schema_name_or_ref)
+            rescue InvalidRefResolution, UnknownRef
+              nil
+            end
+          end
+
+          # Subschema selected by the discriminating property of the instance (a Hash), or nil.
+          def discriminated_subschema(instance)
+            property_name = value.fetch('propertyName')
+            subschemas_by_property_value[instance.fetch(property_name)] if instance.key?(property_name)
           end
         end
       end

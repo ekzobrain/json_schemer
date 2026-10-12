@@ -20,6 +20,7 @@
 - `before_property_validation` and `after_property_validation` hooks declaring five parameters get the same arguments as the new hooks (schema objects and the instance location); others keep getting the original four.
 - Documented changing keyword evaluation order with a meta schema's `keyword_order`.
 - `date` format is validated ~3.5x faster, by matching the RFC 3339 full-date syntax and checking the calendar date instead of parsing it as a date-time.
+- OpenAPI 3.2 support (instead of davishmcclurg/json_schemer#230, which accepted 3.2 documents with the 3.1 document schema extended with 3.2 fields, so 3.1 documents with 3.2 fields were valid too). `3.2.x` documents are validated with the published OpenAPI 3.2 document schema (https://spec.openapis.org/oas/3.2/schema/2025-09-17) and their schemas use the OpenAPI 3.2 dialect (https://spec.openapis.org/oas/3.2/dialect/2025-09-17, `JSONSchemer.openapi32`) unless `jsonSchemaDialect` says otherwise; the 3.1 dialect is accepted too. `3.1.x` documents are validated as before. `discriminator` supports `defaultMapping` in OpenAPI 3.2 schemas.
 
 ## [2.5.0] - 2025-12-08
 

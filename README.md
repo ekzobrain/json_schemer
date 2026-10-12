@@ -1,6 +1,6 @@
 # JSONSchemer
 
-JSON Schema validator. Supports drafts 4, 6, 7, 2019-09, 2020-12, OpenAPI 3.0, and OpenAPI 3.1.
+JSON Schema validator. Supports drafts 4, 6, 7, 2019-09, 2020-12, OpenAPI 3.0, OpenAPI 3.1, and OpenAPI 3.2.
 
 ## Installation
 
@@ -158,6 +158,7 @@ JSONSchemer.schema(
   # 'http://json-schema.org/draft-06/schema#': JSONSchemer.draft6
   # 'http://json-schema.org/draft-04/schema#': JSONSchemer.draft4
   # 'http://json-schema.org/schema#': JSONSchemer.draft4
+  # 'https://spec.openapis.org/oas/3.2/dialect/2025-09-17': JSONSchemer.openapi32
   # 'https://spec.openapis.org/oas/3.1/dialect/base': JSONSchemer.openapi31
   # 'json-schemer://openapi30/schema': JSONSchemer.openapi30
   # default: JSONSchemer.draft202012
@@ -741,6 +742,10 @@ In the example above, custom error messsages are looked up using the following k
 9. `en.json_schemer.errors.*`
 
 ## OpenAPI
+
+Documents are validated with the document schema of their version (`openapi`: `3.0.x`, `3.1.x` or `3.2.x`), so fields added in a later version are invalid in documents of an earlier one. Schemas in `components` use `jsonSchemaDialect`, or by default the dialect of the version: `https://spec.openapis.org/oas/3.2/dialect/2025-09-17` (`JSONSchemer.openapi32`) for 3.2, `https://spec.openapis.org/oas/3.1/dialect/base` (`JSONSchemer.openapi31`) for 3.1 and `JSONSchemer.openapi30` for 3.0.
+
+In OpenAPI 3.2, `discriminator` supports `defaultMapping`: the schema (a schema name or URI reference, like `mapping` values) that validates objects whose discriminating property is missing or has a value without an explicit or implicit mapping.
 
 ```ruby
 document = JSONSchemer.openapi({
