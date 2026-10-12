@@ -16,6 +16,13 @@ module JSONSchemer
       Result.new(self, instance, instance_location, keyword_location, valid, nested, type, annotation, details, ignore_nested, valid ? 'annotations' : 'errors')
     end
 
+    # Result of a keyword whose result is only read for its validity when there's no result tree (`flag` output, see
+    # `Context#result_tree`): details and annotations are then left out.
+    def leaf_result(context, instance, instance_location, keyword_location, valid, nested = nil, type: nil, annotation: nil, details: nil)
+      return Result.light(valid) unless context.result_tree
+      Result.new(self, instance, instance_location, keyword_location, valid, nested, type, annotation, details, false, valid ? 'annotations' : 'errors')
+    end
+
     def escaped_keyword
       @escaped_keyword ||= Location.escape_json_pointer_token(keyword)
     end

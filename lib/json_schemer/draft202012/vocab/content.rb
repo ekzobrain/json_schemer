@@ -39,6 +39,10 @@ module JSONSchemer
         end
 
         class ContentSchema < Keyword
+          def self.result_tree?
+            true
+          end
+
           def self.adjacent_results?
             true
           end

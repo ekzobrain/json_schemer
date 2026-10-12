@@ -4,6 +4,10 @@ module JSONSchemer
     module Vocab
       module Unevaluated
         class UnevaluatedItems < Keyword
+          def self.result_tree?
+            true
+          end
+
           def self.adjacent_results?
             true
           end
@@ -63,6 +67,10 @@ module JSONSchemer
         end
 
         class UnevaluatedProperties < Keyword
+          def self.result_tree?
+            true
+          end
+
           def self.adjacent_results?
             true
           end

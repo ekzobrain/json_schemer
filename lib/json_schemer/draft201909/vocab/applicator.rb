@@ -91,6 +91,10 @@ module JSONSchemer
         end
 
         class UnevaluatedItems < Keyword
+          def self.result_tree?
+            true
+          end
+
           def self.adjacent_results?
             true
           end

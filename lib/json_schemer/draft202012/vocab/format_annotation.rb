@@ -12,9 +12,9 @@ module JSONSchemer
             root.format && root.fetch_format(value, false)
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
+          def validate(instance, instance_location, keyword_location, context)
             valid = parsed == false || parsed.call(instance, value)
-            result(instance, instance_location, keyword_location, valid, :annotation => value)
+            leaf_result(context, instance, instance_location, keyword_location, valid, :annotation => value)
           end
 
         end

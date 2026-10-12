@@ -28,6 +28,12 @@ module JSONSchemer
       false
     end
 
+    # Whether the keyword reads the results of its subschemas (eg annotations nested in them), so they need to be kept in
+    # full even when only validity is needed (`flag` output).
+    def self.result_tree?
+      false
+    end
+
     def absolute_keyword_location
       @absolute_keyword_location ||= "#{parent.absolute_keyword_location}/#{fragment_encode(escaped_keyword)}"
     end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 module JSONSchemer
   class Schema
-    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls) do
+    Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls, :result_tree) do
       # Hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`) run in a
       # transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
       # - objects and arrays are recorded (shallow copy) before hooks change them and are restored afterwards (hooks
@@ -234,7 +234,9 @@ module JSONSchemer
 
     def validate(instance, output_format: @configuration.output_format, resolve_enumerators: @configuration.resolve_enumerators, access_mode: @configuration.access_mode, stringified_keys: @configuration.stringified_keys)
       instance_location = Location.root
-      context = Context.new(instance, [], nil, (!insert_property_defaults && output_format == 'flag'), access_mode, stringified_keys, property_hooks? ? [] : nil, nil, [])
+      short_circuit = !insert_property_defaults && output_format == 'flag'
+      # results are only needed in full (nested results, annotations) for output formats other than `flag`
+      context = Context.new(instance, [], nil, short_circuit, access_mode, stringified_keys, property_hooks? ? [] : nil, nil, [], !short_circuit)
       validation_instance = stringified_keys ? instance : deep_stringify_keys(instance)
       result = validate_instance(validation_instance, instance_location, root_keyword_location, context)
       if insert_property_defaults && result.insert_property_defaults(context, &property_default_resolver)
@@ -246,6 +248,12 @@ module JSONSchemer
       output = result.output(output_format)
       resolve_enumerators!(output) if resolve_enumerators
       output
+    end
+
+    # Whether one of the keywords reads the results of its subschemas (so they need to be kept in full).
+    def result_tree_keywords?
+      return @result_tree_keywords if defined?(@result_tree_keywords)
+      @result_tree_keywords = parsed.each_value.any? { |keyword_instance| keyword_instance.class.result_tree? }
     end
 
     NO_ADJACENT_RESULTS = {}.freeze
@@ -284,23 +292,27 @@ module JSONSchemer
       original_adjacent_results = context.adjacent_results
       adjacent_results = context.adjacent_results = (collect_adjacent_results? ? {} : NO_ADJACENT_RESULTS)
       short_circuit = context.short_circuit
+      # without a result tree (`flag` output), only validity is returned, unless a keyword of this schema reads the
+      # results of its subschemas (eg `unevaluatedProperties`)
+      original_result_tree = context.result_tree
+      result_tree = context.result_tree = original_result_tree || result_tree_keywords?
 
       begin
-        return result(instance, instance_location, keyword_location, false) if false.equal?(value)
-        return result(instance, instance_location, keyword_location, true) if true.equal?(value) || value.empty?
+        return (result_tree ? result(instance, instance_location, keyword_location, false) : Result::INVALID) if false.equal?(value)
+        return (result_tree ? result(instance, instance_location, keyword_location, true) : Result::VALID) if true.equal?(value) || value.empty?
 
         if instance.is_a?(Hash) && root.before_object_validation.any? && (properties = parsed['properties']).is_a?(PROPERTIES_KEYWORD_CLASS)
           properties.before_object_validation(instance, instance_location, context)
         end
 
         valid = true
-        nested = []
+        nested = [] if result_tree
 
         parsed.each do |keyword, keyword_instance|
           next unless keyword_result = keyword_instance.validate(instance, instance_location, join_location(keyword_location, keyword), context)
           valid &&= keyword_result.valid
-          return result(instance, instance_location, keyword_location, false) if short_circuit && !valid
-          nested << keyword_result
+          return (result_tree ? result(instance, instance_location, keyword_location, false) : Result::INVALID) if short_circuit && !valid
+          nested << keyword_result if result_tree
           adjacent_results[keyword_instance.class] = keyword_result unless NO_ADJACENT_RESULTS.equal?(adjacent_results)
         end
 
@@ -313,16 +325,18 @@ module JSONSchemer
                 valid &&= custom_keyword_valid
                 type = custom_keyword_result.is_a?(String) ? custom_keyword_result : custom_keyword
                 details = { 'keyword' => custom_keyword, 'result' => custom_keyword_result }
-                nested << result(instance, instance_location, keyword_location, custom_keyword_valid, :type => type, :details => details)
+                nested << result(instance, instance_location, keyword_location, custom_keyword_valid, :type => type, :details => details) if result_tree
               end
             end
           end
         end
 
+        return Result.light(valid) unless result_tree
         result(instance, instance_location, keyword_location, valid, nested)
       ensure
         context.dynamic_scope.pop
         context.adjacent_results = original_adjacent_results
+        context.result_tree = original_result_tree
       end
     end
 

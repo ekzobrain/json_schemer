@@ -10,6 +10,11 @@ module JSONSchemer
   end
 
   Result = Struct.new(:source, :instance, :instance_location, :keyword_location, :valid, :nested, :type, :annotation, :details, :ignore_nested, :nested_key) do
+    # Results that only carry validity, for `flag` output (see `Context#result_tree`).
+    def self.light(valid)
+      valid ? Result::VALID : Result::INVALID
+    end
+
     def output(output_format)
       case output_format
       when 'classic'
@@ -245,5 +250,10 @@ module JSONSchemer
       end
       interpolation_variables
     end
+  end
+
+  class Result
+    VALID = new(nil, nil, nil, nil, true, nil, nil, nil, nil, false, 'annotations').freeze
+    INVALID = new(nil, nil, nil, nil, false, nil, nil, nil, nil, false, 'errors').freeze
   end
 end

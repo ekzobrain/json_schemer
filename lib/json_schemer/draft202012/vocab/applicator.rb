@@ -15,11 +15,18 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            result_tree = context.result_tree
+            valid = true
+            nested = [] if result_tree
             index = -1
-            nested = parsed.map do |subschema|
-              subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index += 1)), context)
+            parsed.each do |subschema|
+              index += 1
+              subschema_result = subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
+              valid &&= subschema_result.valid
+              nested << subschema_result if result_tree
             end
-            result(instance, instance_location, keyword_location, nested.all?(&:valid), nested)
+            return Result.light(valid) unless result_tree
+            result(instance, instance_location, keyword_location, valid, nested)
           end
 
           def valid_instance?(instance, context)
@@ -44,18 +51,25 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            result_tree = context.result_tree
             kept_changes = nil
+            valid = false
+            nested = [] if result_tree
             index = -1
-            nested = parsed.map do |subschema|
+            parsed.each do |subschema|
               index += 1
               subschema_result, changes = context.isolate(instance) do
                 subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
               end
-              kept_changes ||= changes if subschema_result.valid
-              subschema_result
+              if subschema_result.valid
+                valid = true
+                kept_changes ||= changes
+              end
+              nested << subschema_result if result_tree
             end
             context.apply_changes(kept_changes)
-            result(instance, instance_location, keyword_location, nested.any?(&:valid), nested)
+            return Result.light(valid) unless result_tree
+            result(instance, instance_location, keyword_location, valid, nested)
           end
 
           def valid_instance?(instance, context)
@@ -82,18 +96,24 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
+            result_tree = context.result_tree
             kept_changes = nil
+            valid_count = 0
+            nested = [] if result_tree
             index = -1
-            nested = parsed.map do |subschema|
+            parsed.each do |subschema|
               index += 1
               subschema_result, changes = context.isolate(instance) do
                 subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
               end
-              kept_changes ||= changes if subschema_result.valid
-              subschema_result
+              if subschema_result.valid
+                valid_count += 1
+                kept_changes ||= changes
+              end
+              nested << subschema_result if result_tree
             end
-            valid_count = nested.count(&:valid)
             context.apply_changes(kept_changes) if valid_count == 1
+            return Result.light(valid_count == 1) unless result_tree
             result(instance, instance_location, keyword_location, valid_count == 1, nested, :ignore_nested => valid_count > 1)
           end
 
@@ -280,8 +300,9 @@ module JSONSchemer
             evaluated_index = context.adjacent_results[PrefixItems]&.annotation
             offset = evaluated_index ? (evaluated_index + 1) : 0
 
+            result_tree = context.result_tree
             valid = true
-            nested = []
+            nested = [] if result_tree
             value_data = value_hooks_data(instance, instance_location, context)
             index = offset
             while index < instance.size
@@ -289,9 +310,11 @@ module JSONSchemer
                 parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
-              nested << nested_result
+              nested << nested_result if result_tree
               index += 1
             end
+            # the annotation is only read by `unevaluatedItems`, which keeps the result tree
+            return Result.light(valid) unless result_tree
 
             result(instance, instance_location, keyword_location, valid, nested, :annotation => nested.any?)
           end
@@ -371,24 +394,30 @@ module JSONSchemer
 
             call_property_hooks(root.before_property_validation, instance, instance_location, context)
 
-            evaluated_keys = []
-            nested = []
+            result_tree = context.result_tree
+            valid = true
+            # the annotation is only read by `unevaluatedProperties`, which keeps the result tree
+            evaluated_keys = [] if result_tree
+            nested = [] if result_tree
             value_data = value_hooks_data(instance, instance_location, context)
 
             parsed.each do |property, subschema|
               # value hooks are called for every property, including missing ones (eg to insert or compute them)
               nested_result = validate_value(value_data, instance, property, subschema, instance_location, context) do
                 if instance.key?(property)
-                  evaluated_keys << property
+                  evaluated_keys << property if result_tree
                   subschema.validate_instance(instance.fetch(property), join_location(instance_location, property), join_location(keyword_location, property), context)
                 end
               end
-              nested << nested_result if nested_result
+              next unless nested_result
+              valid &&= nested_result.valid
+              nested << nested_result if result_tree
             end
 
             call_property_hooks(root.after_property_validation, instance, instance_location, context)
 
-            result(instance, instance_location, keyword_location, nested.all?(&:valid), nested, :annotation => evaluated_keys)
+            return Result.light(valid) unless result_tree
+            result(instance, instance_location, keyword_location, valid, nested, :annotation => evaluated_keys)
           end
 
           def call_property_hooks(hooks, instance, instance_location, context)
@@ -476,9 +505,11 @@ module JSONSchemer
           def validate(instance, instance_location, keyword_location, context)
             return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
+            result_tree = context.result_tree
             valid = true
-            nested = []
-            evaluated = []
+            # the annotation is only read by `unevaluatedProperties`, which keeps the result tree
+            nested = [] if result_tree
+            evaluated = [] if result_tree
             value_data = value_hooks_data(instance, instance_location, context)
             # hooks can change the instance, so iterate over a copy of its keys
             (value_data ? instance.keys : instance).each do |key, _value|
@@ -487,10 +518,12 @@ module JSONSchemer
                 parsed.validate_instance(instance.fetch(key), join_location(instance_location, key), keyword_location, context)
               end
               valid &&= nested_result.valid
+              next unless result_tree
               nested << nested_result
               evaluated << key
             end
 
+            return Result.light(valid) unless result_tree
             result(instance, instance_location, keyword_location, valid, nested, :annotation => evaluated)
           end
 

@@ -14,10 +14,10 @@ module JSONSchemer
             "number at #{formatted_instance_location} is greater than or equal to `maximum`"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
+          def validate(instance, instance_location, keyword_location, context)
             maximum = schema.parsed.fetch('maximum').parsed
             valid = !instance.is_a?(Numeric) || !value || !maximum || instance < maximum
-            result(instance, instance_location, keyword_location, valid)
+            leaf_result(context, instance, instance_location, keyword_location, valid)
           end
 
         end
@@ -27,10 +27,10 @@ module JSONSchemer
             "number at #{formatted_instance_location} is less than or equal to `minimum`"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
+          def validate(instance, instance_location, keyword_location, context)
             minimum = schema.parsed.fetch('minimum').parsed
             valid = !instance.is_a?(Numeric) || !value || !minimum || instance > minimum
-            result(instance, instance_location, keyword_location, valid)
+            leaf_result(context, instance, instance_location, keyword_location, valid)
           end
 
         end

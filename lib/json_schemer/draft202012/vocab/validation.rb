@@ -29,12 +29,12 @@ module JSONSchemer
             end
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
+          def validate(instance, instance_location, keyword_location, context)
             case parsed
             when String
-              result(instance, instance_location, keyword_location, valid_type(parsed, instance), :type => parsed)
+              leaf_result(context, instance, instance_location, keyword_location, valid_type(parsed, instance), :type => parsed)
             when Array
-              result(instance, instance_location, keyword_location, parsed.any? { |type| valid_type(type, instance) })
+              leaf_result(context, instance, instance_location, keyword_location, parsed.any? { |type| valid_type(type, instance) })
             end
           end
 
@@ -78,8 +78,8 @@ module JSONSchemer
             "value at #{formatted_instance_location} is not one of: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !value || value.include?(instance))
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !value || value.include?(instance))
           end
 
           def valid_instance?(instance, _context)
@@ -92,8 +92,8 @@ module JSONSchemer
             "value at #{formatted_instance_location} is not: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, value == instance)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, value == instance)
           end
 
           def valid_instance?(instance, _context)
@@ -106,8 +106,8 @@ module JSONSchemer
             "number at #{formatted_instance_location} is not a multiple of: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Numeric) || BigDecimal(instance.to_s).modulo(value).zero?)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Numeric) || BigDecimal(instance.to_s).modulo(value).zero?)
           end
 
           def valid_instance?(instance, _context)
@@ -120,8 +120,8 @@ module JSONSchemer
             "number at #{formatted_instance_location} is greater than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance <= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance <= value)
           end
 
           def valid_instance?(instance, _context)
@@ -134,8 +134,8 @@ module JSONSchemer
             "number at #{formatted_instance_location} is greater than or equal to: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance < value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance < value)
           end
 
           def valid_instance?(instance, _context)
@@ -148,8 +148,8 @@ module JSONSchemer
             "number at #{formatted_instance_location} is less than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance >= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance >= value)
           end
 
           def valid_instance?(instance, _context)
@@ -162,8 +162,8 @@ module JSONSchemer
             "number at #{formatted_instance_location} is less than or equal to: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance > value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Numeric) || instance > value)
           end
 
           def valid_instance?(instance, _context)
@@ -176,8 +176,8 @@ module JSONSchemer
             "string length at #{formatted_instance_location} is greater than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(String) || instance.size <= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(String) || instance.size <= value)
           end
 
           def valid_instance?(instance, _context)
@@ -190,8 +190,8 @@ module JSONSchemer
             "string length at #{formatted_instance_location} is less than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(String) || instance.size >= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(String) || instance.size >= value)
           end
 
           def valid_instance?(instance, _context)
@@ -208,8 +208,8 @@ module JSONSchemer
             root.resolve_regexp(value)
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(String) || parsed.match?(instance))
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(String) || parsed.match?(instance))
           end
 
           def valid_instance?(instance, _context)
@@ -222,8 +222,8 @@ module JSONSchemer
             "array size at #{formatted_instance_location} is greater than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Array) || instance.size <= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Array) || instance.size <= value)
           end
 
           def valid_instance?(instance, _context)
@@ -236,8 +236,8 @@ module JSONSchemer
             "array size at #{formatted_instance_location} is less than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Array) || instance.size >= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Array) || instance.size >= value)
           end
 
           def valid_instance?(instance, _context)
@@ -250,8 +250,8 @@ module JSONSchemer
             "array items at #{formatted_instance_location} are not unique"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Array) || value == false || instance.size == instance.uniq.size)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Array) || value == false || instance.size == instance.uniq.size)
           end
 
           def valid_instance?(instance, _context)
@@ -269,9 +269,9 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Array) && context.adjacent_results.key?(Applicator::Contains)
+            return leaf_result(context, instance, instance_location, keyword_location, true) unless instance.is_a?(Array) && context.adjacent_results.key?(Applicator::Contains)
             evaluated_items = context.adjacent_results.fetch(Applicator::Contains).annotation
-            result(instance, instance_location, keyword_location, evaluated_items.size <= value)
+            leaf_result(context, instance, instance_location, keyword_location, evaluated_items.size <= value)
           end
 
         end
@@ -286,9 +286,9 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Array) && context.adjacent_results.key?(Applicator::Contains)
+            return leaf_result(context, instance, instance_location, keyword_location, true) unless instance.is_a?(Array) && context.adjacent_results.key?(Applicator::Contains)
             evaluated_items = context.adjacent_results.fetch(Applicator::Contains).annotation
-            result(instance, instance_location, keyword_location, evaluated_items.size >= value)
+            leaf_result(context, instance, instance_location, keyword_location, evaluated_items.size >= value)
           end
 
         end
@@ -298,8 +298,8 @@ module JSONSchemer
             "object size at #{formatted_instance_location} is greater than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Hash) || instance.size <= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Hash) || instance.size <= value)
           end
 
           def valid_instance?(instance, _context)
@@ -312,8 +312,8 @@ module JSONSchemer
             "object size at #{formatted_instance_location} is less than: #{value}"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            result(instance, instance_location, keyword_location, !instance.is_a?(Hash) || instance.size >= value)
+          def validate(instance, instance_location, keyword_location, context)
+            leaf_result(context, instance, instance_location, keyword_location, !instance.is_a?(Hash) || instance.size >= value)
           end
 
           def valid_instance?(instance, _context)
@@ -327,7 +327,7 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
+            return leaf_result(context, instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
             required_keys = value
 
@@ -349,7 +349,7 @@ module JSONSchemer
             end
 
             details = { 'missing_keys' => missing_keys } if missing_keys
-            result(instance, instance_location, keyword_location, !missing_keys, :details => details)
+            leaf_result(context, instance, instance_location, keyword_location, !missing_keys, :details => details)
           end
 
           def valid_instance?(instance, context)
@@ -380,8 +380,8 @@ module JSONSchemer
             "object at #{formatted_instance_location} is missing required `dependentRequired` properties"
           end
 
-          def validate(instance, instance_location, keyword_location, _context)
-            return result(instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
+          def validate(instance, instance_location, keyword_location, context)
+            return leaf_result(context, instance, instance_location, keyword_location, true) unless instance.is_a?(Hash)
 
             existing_keys = instance.keys
 
@@ -391,7 +391,7 @@ module JSONSchemer
               result(instance, join_location(instance_location, key), join_location(keyword_location, key), (required_keys - existing_keys).none?)
             end
 
-            result(instance, instance_location, keyword_location, nested.all?(&:valid), nested)
+            leaf_result(context, instance, instance_location, keyword_location, nested.all?(&:valid), nested)
           end
 
         end
