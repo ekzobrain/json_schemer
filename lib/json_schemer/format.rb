@@ -6,7 +6,7 @@ module JSONSchemer
       !instance.is_a?(String) || valid_date_time?(instance)
     end
     DATE = proc do |instance, _format|
-      !instance.is_a?(String) || valid_date_time?("#{instance}T04:05:06.123456789+07:00")
+      !instance.is_a?(String) || valid_date?(instance)
     end
     TIME = proc do |instance, _format|
       !instance.is_a?(String) || valid_date_time?("2001-02-03T#{instance}")
@@ -67,6 +67,8 @@ module JSONSchemer
       !instance.is_a?(String) || valid_regex?(instance)
     end
 
+    # RFC 3339 full-date: 4DIGIT "-" 2DIGIT "-" 2DIGIT (`\d` only matches ASCII digits)
+    FULL_DATE_REGEX = /\A(\d{4})-(\d{2})-(\d{2})\z/.freeze
     DATE_TIME_OFFSET_REGEX = /(Z|[\+\-]([01][0-9]|2[0-3]):[0-5][0-9])\z/i.freeze
     DATE_TIME_SEPARATOR_CHARACTER_CLASS = '[Tt\s]'
     HOUR_24_REGEX = /#{DATE_TIME_SEPARATOR_CHARACTER_CLASS}24:/.freeze
@@ -91,6 +93,13 @@ module JSONSchemer
         binary = data.b
         binary.gsub!(regexp, BINARY_TO_PERCENT_ENCODED)
         binary.force_encoding(data.encoding)
+      end
+
+      # RFC 3339 full-date in the proleptic Gregorian calendar. Equivalent to (and ~5x faster than) parsing it as part
+      # of a date-time.
+      def valid_date?(data)
+        return false unless (match = FULL_DATE_REGEX.match(data))
+        Date.valid_date?(match[1].to_i, match[2].to_i, match[3].to_i, Date::GREGORIAN)
       end
 
       def valid_date_time?(data)

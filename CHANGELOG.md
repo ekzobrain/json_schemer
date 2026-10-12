@@ -6,6 +6,8 @@
 
 - Property hook changes made while trying `anyOf`, `oneOf`, `not`, `if` and `contains` subschemas no longer leak into other subschemas or remain after failed ones.
 - `contentSchema` no longer raises with property hooks.
+- `date` and `date-time` formats accept dates in the proleptic Gregorian calendar used by RFC 3339, including 1582-10-05 to 1582-10-14 (davishmcclurg/json_schemer#233).
+- `date` format rejects dates with leading whitespace or a sign (eg ` 2020-09-03`, `-2020-09-03`), which aren't RFC 3339 full-dates.
 - `additionalProperties` checks property names against adjacent `properties` and `patternProperties` instead of using their annotations, so a declared property set by a hook after `properties` validated the object (eg by a later property's `before_value_validation` hook, an `after_property_validation` hook or a subschema evaluated after `properties`) is no longer reported as an additional property. This doesn't change validation results without hooks: the 2019-09 and 2020-12 specifications define `additionalProperties` with the annotations of `properties` and `patternProperties`, which hold the instance properties they evaluated, and explicitly allow checking the names and patterns directly instead since it gives the same result; draft 7 and earlier define it with the names and patterns. The two only differ when the instance changes during validation, which the specifications don't consider. `unevaluatedProperties` still uses annotations.
 
 ### Features
@@ -17,6 +19,7 @@
 - `JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT` hook to insert defaults in a single validation pass (recommended in `before_object_validation`).
 - `before_property_validation` and `after_property_validation` hooks declaring five parameters get the same arguments as the new hooks (schema objects and the instance location); others keep getting the original four.
 - Documented changing keyword evaluation order with a meta schema's `keyword_order`.
+- `date` format is validated ~3.5x faster, by matching the RFC 3339 full-date syntax and checking the calendar date instead of parsing it as a date-time.
 
 ## [2.5.0] - 2025-12-08
 

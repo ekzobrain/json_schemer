@@ -746,6 +746,20 @@ class FormatTest < Minitest::Test
     refute(schema.valid?('1582-13-01'))
   end
 
+  def test_date_format_is_strict_full_date
+    schema = JSONSchemer.schema({ 'format' => 'date' })
+    assert(schema.valid?('2020-02-29'))
+    assert(schema.valid?('0000-01-01'))
+    refute(schema.valid?('2021-02-29'))
+    refute(schema.valid?('1900-02-29'))
+    refute(schema.valid?(' 2020-09-03'))
+    refute(schema.valid?('-2020-09-03'))
+    refute(schema.valid?('+2020-09-03'))
+    refute(schema.valid?("2020-09-03\n"))
+    refute(schema.valid?('20200-09-03'))
+    refute(schema.valid?("2020-09-0\u0663"))
+  end
+
   def test_date_time_space_separator
     assert(JSONSchemer.schema({ 'format' => 'date-time' }).valid?('2023-11-01T23:00:00Z'))
     assert(JSONSchemer.schema({ 'format' => 'date-time' }).valid?('2023-11-01 23:00:00Z'))
