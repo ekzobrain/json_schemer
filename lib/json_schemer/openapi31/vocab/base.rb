@@ -13,7 +13,7 @@ module JSONSchemer
                 next if skip_ref_once == ref_schema.absolute_keyword_location
                 ref_schema.parsed['discriminator']&.skip_ref_once = schema.absolute_keyword_location
               end
-              nested << subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+              nested << subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
             end
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested)
           ensure

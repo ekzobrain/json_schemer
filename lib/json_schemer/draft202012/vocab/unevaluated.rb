@@ -4,6 +4,10 @@ module JSONSchemer
     module Vocab
       module Unevaluated
         class UnevaluatedItems < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "array items at #{formatted_instance_location} do not match `unevaluatedItems` schema"
           end
@@ -30,7 +34,7 @@ module JSONSchemer
             value_data = value_hooks_data(instance, instance_location, context)
             unevaluated_items.each do |index|
               nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
               nested << nested_result
@@ -59,6 +63,10 @@ module JSONSchemer
         end
 
         class UnevaluatedProperties < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "object properties at #{formatted_instance_location} do not match `unevaluatedProperties` schema"
           end

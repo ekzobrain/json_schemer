@@ -22,6 +22,12 @@ module JSONSchemer
       nil
     end
 
+    # Whether the keyword reads the results of adjacent keywords (`context.adjacent_results`), which schemas only
+    # collect when one of their keywords does.
+    def self.adjacent_results?
+      false
+    end
+
     def absolute_keyword_location
       @absolute_keyword_location ||= "#{parent.absolute_keyword_location}/#{fragment_encode(escaped_keyword)}"
     end
@@ -135,7 +141,7 @@ module JSONSchemer
       return yield unless data
 
       # the same location object is used to validate the value
-      value_location = Location.join(instance_location, key.to_s)
+      value_location = Location.join(instance_location, key.is_a?(Integer) ? Location.index_name(key) : key)
       before_hooks = root.before_value_validation
       after_hooks = root.after_value_validation
 

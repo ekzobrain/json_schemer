@@ -15,8 +15,9 @@ module JSONSchemer
           end
 
           def validate(instance, instance_location, keyword_location, context)
-            nested = parsed.map.with_index do |subschema, index|
-              subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+            index = -1
+            nested = parsed.map do |subschema|
+              subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index += 1)), context)
             end
             result(instance, instance_location, keyword_location, nested.all?(&:valid), nested)
           end
@@ -44,9 +45,11 @@ module JSONSchemer
 
           def validate(instance, instance_location, keyword_location, context)
             kept_changes = nil
-            nested = parsed.map.with_index do |subschema, index|
+            index = -1
+            nested = parsed.map do |subschema|
+              index += 1
               subschema_result, changes = context.isolate(instance) do
-                subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+                subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
               end
               kept_changes ||= changes if subschema_result.valid
               subschema_result
@@ -80,9 +83,11 @@ module JSONSchemer
 
           def validate(instance, instance_location, keyword_location, context)
             kept_changes = nil
-            nested = parsed.map.with_index do |subschema, index|
+            index = -1
+            nested = parsed.map do |subschema|
+              index += 1
               subschema_result, changes = context.isolate(instance) do
-                subschema.validate_instance(instance, instance_location, join_location(keyword_location, index.to_s), context)
+                subschema.validate_instance(instance, instance_location, join_location(keyword_location, Location.index_name(index)), context)
               end
               kept_changes ||= changes if subschema_result.valid
               subschema_result
@@ -142,6 +147,10 @@ module JSONSchemer
         end
 
         class Then < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "value at #{formatted_instance_location} does not match conditional `then` schema"
           end
@@ -159,6 +168,10 @@ module JSONSchemer
         end
 
         class Else < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "value at #{formatted_instance_location} does not match conditional `else` schema"
           end
@@ -222,7 +235,7 @@ module JSONSchemer
             value_data = value_hooks_data(instance, instance_location, context)
             limit = instance.size < parsed.size ? instance.size : parsed.size
             limit.times do |index|
-              index_name = index.to_s
+              index_name = Location.index_name(index)
               subschema = parsed.fetch(index)
               nested_result = validate_value(value_data, instance, index, subschema, instance_location, context) do
                 subschema.validate_instance(instance.fetch(index), join_location(instance_location, index_name), join_location(keyword_location, index_name), context)
@@ -249,6 +262,10 @@ module JSONSchemer
         end
 
         class Items < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "array items at #{formatted_instance_location} do not match `items` schema"
           end
@@ -269,7 +286,7 @@ module JSONSchemer
             index = offset
             while index < instance.size
               nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
               nested << nested_result
@@ -311,7 +328,7 @@ module JSONSchemer
             instance.each_with_index do |item, index|
               nested_result, changes = context.isolate(value_data ? instance : item) do
                 validate_value(value_data, instance, index, parsed, instance_location, context) do
-                  parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                  parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
                 end
               end
               context.apply_changes(changes) if nested_result.valid

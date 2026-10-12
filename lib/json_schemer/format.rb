@@ -68,7 +68,7 @@ module JSONSchemer
     end
 
     # RFC 3339 full-date: 4DIGIT "-" 2DIGIT "-" 2DIGIT (`\d` only matches ASCII digits)
-    FULL_DATE_REGEX = /\A(\d{4})-(\d{2})-(\d{2})\z/.freeze
+    FULL_DATE_REGEX = /\A\d{4}-\d{2}-\d{2}\z/.freeze
     # `DateTime.rfc3339` allows leading whitespace and a minus sign (negative years), which RFC 3339 doesn't
     DATE_TIME_START_REGEX = /\A\d/.freeze
     DATE_TIME_OFFSET_REGEX = /(Z|[\+\-]([01][0-9]|2[0-3]):[0-5][0-9])\z/i.freeze
@@ -100,8 +100,12 @@ module JSONSchemer
       # RFC 3339 full-date in the proleptic Gregorian calendar. Equivalent to (and ~5x faster than) parsing it as part
       # of a date-time.
       def valid_date?(data)
-        return false unless (match = FULL_DATE_REGEX.match(data))
-        Date.valid_date?(match[1].to_i, match[2].to_i, match[3].to_i, Date::GREGORIAN)
+        return false unless FULL_DATE_REGEX.match?(data)
+        # ASCII digits at known positions (checked above), read without allocating substrings
+        year = (data.getbyte(0) - 48) * 1000 + (data.getbyte(1) - 48) * 100 + (data.getbyte(2) - 48) * 10 + (data.getbyte(3) - 48)
+        month = (data.getbyte(5) - 48) * 10 + (data.getbyte(6) - 48)
+        day = (data.getbyte(8) - 48) * 10 + (data.getbyte(9) - 48)
+        Date.valid_date?(year, month, day, Date::GREGORIAN)
       end
 
       def valid_date_time?(data)

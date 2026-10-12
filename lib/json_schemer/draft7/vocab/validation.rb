@@ -33,7 +33,7 @@ module JSONSchemer
             index = offset
             while index < instance.size
               nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
               nested << nested_result

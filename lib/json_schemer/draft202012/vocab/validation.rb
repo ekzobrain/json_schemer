@@ -260,6 +260,10 @@ module JSONSchemer
         end
 
         class MaxContains < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "number of array items at #{formatted_instance_location} matching `contains` schema is greater than: #{value}"
           end
@@ -273,6 +277,10 @@ module JSONSchemer
         end
 
         class MinContains < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "number of array items at #{formatted_instance_location} matching `contains` schema is less than: #{value}"
           end

@@ -248,6 +248,15 @@ module JSONSchemer
       output
     end
 
+    NO_ADJACENT_RESULTS = {}.freeze
+    private_constant :NO_ADJACENT_RESULTS
+
+    # Whether one of the keywords reads the results of adjacent keywords (so they need to be collected).
+    def collect_adjacent_results?
+      return @collect_adjacent_results if defined?(@collect_adjacent_results)
+      @collect_adjacent_results = parsed.each_value.any? { |keyword_instance| keyword_instance.class.adjacent_results? }
+    end
+
     def property_hooks?
       return @property_hooks if defined?(@property_hooks)
       @property_hooks = before_object_validation.any? || before_property_validation.any? || after_property_validation.any? || value_hooks?
@@ -273,12 +282,12 @@ module JSONSchemer
     def validate_instance(instance, instance_location, keyword_location, context)
       context.dynamic_scope.push(self)
       original_adjacent_results = context.adjacent_results
-      adjacent_results = context.adjacent_results = {}
+      adjacent_results = context.adjacent_results = (collect_adjacent_results? ? {} : NO_ADJACENT_RESULTS)
       short_circuit = context.short_circuit
 
       begin
-        return result(instance, instance_location, keyword_location, false) if value == false
-        return result(instance, instance_location, keyword_location, true) if value == true || value.empty?
+        return result(instance, instance_location, keyword_location, false) if false.equal?(value)
+        return result(instance, instance_location, keyword_location, true) if true.equal?(value) || value.empty?
 
         if instance.is_a?(Hash) && root.before_object_validation.any? && (properties = parsed['properties']).is_a?(PROPERTIES_KEYWORD_CLASS)
           properties.before_object_validation(instance, instance_location, context)
@@ -292,7 +301,7 @@ module JSONSchemer
           valid &&= keyword_result.valid
           return result(instance, instance_location, keyword_location, false) if short_circuit && !valid
           nested << keyword_result
-          adjacent_results[keyword_instance.class] = keyword_result
+          adjacent_results[keyword_instance.class] = keyword_result unless NO_ADJACENT_RESULTS.equal?(adjacent_results)
         end
 
         if root.custom_keywords.any?

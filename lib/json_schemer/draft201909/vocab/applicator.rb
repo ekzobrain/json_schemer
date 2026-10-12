@@ -29,7 +29,7 @@ module JSONSchemer
               limit.times do |index|
                 subschema = parsed.fetch(index)
                 nested_result = validate_value(value_data, instance, index, subschema, instance_location, context) do
-                  subschema.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), join_location(keyword_location, index.to_s), context)
+                  subschema.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), join_location(keyword_location, Location.index_name(index)), context)
                 end
                 valid &&= nested_result.valid
                 nested_results << nested_result
@@ -40,7 +40,7 @@ module JSONSchemer
               nested_results = []
               instance.size.times do |index|
                 nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                  parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                  parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
                 end
                 valid &&= nested_result.valid
                 nested_results << nested_result
@@ -54,6 +54,10 @@ module JSONSchemer
         end
 
         class AdditionalItems < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "array items at #{formatted_instance_location} do not match `additionalItems` schema"
           end
@@ -74,7 +78,7 @@ module JSONSchemer
             index = offset
             while index < instance.size
               nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
               nested << nested_result
@@ -87,6 +91,10 @@ module JSONSchemer
         end
 
         class UnevaluatedItems < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def error(formatted_instance_location:, **)
             "array items at #{formatted_instance_location} do not match `unevaluatedItems` schema"
           end
@@ -109,7 +117,7 @@ module JSONSchemer
             value_data = value_hooks_data(instance, instance_location, context)
             unevaluated_items.each do |index|
               nested_result = validate_value(value_data, instance, index, parsed, instance_location, context) do
-                parsed.validate_instance(instance.fetch(index), join_location(instance_location, index.to_s), keyword_location, context)
+                parsed.validate_instance(instance.fetch(index), join_location(instance_location, Location.index_name(index)), keyword_location, context)
               end
               valid &&= nested_result.valid
               nested << nested_result

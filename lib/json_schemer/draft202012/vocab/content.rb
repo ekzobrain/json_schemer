@@ -19,6 +19,10 @@ module JSONSchemer
         end
 
         class ContentMediaType < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def parse
             root.fetch_content_media_type(value) { raise UnknownContentMediaType, value }
           end
@@ -35,6 +39,10 @@ module JSONSchemer
         end
 
         class ContentSchema < Keyword
+          def self.adjacent_results?
+            true
+          end
+
           def parse
             subschema(value)
           end
