@@ -50,9 +50,11 @@ module JSONSchemer
             end
           end
 
+          # With hooks, subschemas are tried in order and the changes of each valid one are kept before trying the next
+          # one, so later subschemas see them (and a subschema made invalid by them is rolled back). The data then
+          # satisfies the last valid subschema, which is enough for `anyOf`; earlier subschemas aren't checked again.
           def validate(instance, instance_location, keyword_location, context)
             result_tree = context.result_tree
-            kept_changes = nil
             valid = false
             nested = [] if result_tree
             index = -1
@@ -63,11 +65,10 @@ module JSONSchemer
               end
               if subschema_result.valid
                 valid = true
-                kept_changes ||= changes
+                context.apply_changes(changes)
               end
               nested << subschema_result if result_tree
             end
-            context.apply_changes(kept_changes)
             return Result.light(valid) unless result_tree
             result(instance, instance_location, keyword_location, valid, nested)
           end

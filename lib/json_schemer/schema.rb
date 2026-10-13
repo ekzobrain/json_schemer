@@ -3,7 +3,8 @@ module JSONSchemer
   class Schema
     Context = Struct.new(:instance, :dynamic_scope, :adjacent_results, :short_circuit, :access_mode, :stringified_keys, :transactions, :detached, :deferred_calls, :result_tree) do
       # Hooks change the instance. Subschemas that are only tried (`anyOf`, `oneOf`, `not`, `if`, `contains`) run in a
-      # transaction, so failed attempts leave nothing behind and attempts don't see each other's changes:
+      # transaction, so failed attempts leave nothing behind and attempts don't see each other's changes (except
+      # `anyOf`, whose valid subschemas keep their changes before the next one is tried):
       # - objects and arrays are recorded (shallow copy) before hooks change them and are restored afterwards (hooks
       #   must only assign properties/items of the object/array they're given for this to work);
       # - `deferred_value_validation` hook calls are deferred until the whole instance is validated (so no keyword

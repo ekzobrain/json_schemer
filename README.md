@@ -476,7 +476,25 @@ Values validated by several schemas (here `start` by `properties` and `patternPr
 
 ### Subschemas That Don't Apply
 
-Subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` are only tried, so hooks called while trying them are applied in a transaction: every subschema sees the same data, and changes and `deferred_value_validation` calls are kept only for the first valid `anyOf` subschema, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items. To be rolled back correctly, hooks must only assign values of the object or array they're given (`data[key] = value`) rather than modify nested objects in place.
+Subschemas of `anyOf`, `oneOf`, `not`, `if` and `contains` are only tried, so hooks called while trying them are applied in a transaction: changes and `deferred_value_validation` calls are kept only for valid `anyOf` subschemas, the valid `oneOf` subschema (if exactly one is valid), a matching `if` and matching `contains` items, and rolled back otherwise. To be rolled back correctly, hooks must only assign values of the object or array they're given (`data[key] = value`) rather than modify nested objects in place.
+
+`anyOf` subschemas are tried in order, and the changes of each valid one are kept before the next one is tried: every valid subschema contributes its changes, and a subschema sees the changes of the valid ones before it (a subschema made invalid by them is rolled back, which doesn't change the `anyOf` result, since an earlier one is valid). The data then satisfies the last valid subschema; earlier valid subschemas aren't checked again, so a later subschema can add a value that an earlier one doesn't allow:
+
+```ruby
+schema = {
+  'anyOf' => [
+    { 'properties' => { 'a' => { 'default' => 1 }, 'b' => false } }, # `b` isn't allowed
+    { 'properties' => { 'b' => { 'default' => 2 } } }
+  ]
+}
+data = {}
+JSONSchemer.schema(schema, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT]).valid?(data)
+# => true
+data
+# => {"a"=>1, "b"=>2}
+```
+
+Put the subschema that constrains values computed by others after them (the second one here would then be rolled back). `oneOf` subschemas, `not`, `if` and `contains` items all see the same data, since each of them must be checked on its own.
 
 ### Repeated Calls
 

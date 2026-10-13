@@ -372,7 +372,7 @@ class HooksTest < Minitest::Test
     assert_isolated(schema, { 'start_date' => '2020-09-03' }, false, { 'start_date' => '2020-09-03' }, after_property_validation: [CONVERT_DATE])
   end
 
-  def test_anyOf_keeps_changes_from_first_valid_subschema
+  def test_anyOf_keeps_changes_from_valid_subschemas
     schema = {
       'anyOf' => [
         { 'required' => ['missing'], 'properties' => { 'a' => { 'default' => 'first' } } },
@@ -388,6 +388,82 @@ class HooksTest < Minitest::Test
       before_property_validation: [SET_DEFAULT],
       after_property_validation: [CONVERT_DATE]
     )
+  end
+
+  def test_anyOf_keeps_changes_from_every_valid_subschema
+    schema = {
+      'anyOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 } } },
+        { 'properties' => { 'b' => { 'default' => 2 } }, 'required' => ['missing'] },
+        { 'properties' => { 'c' => { 'default' => 3 } } }
+      ]
+    }
+    assert_isolated(schema, {}, true, { 'a' => 1, 'c' => 3 }, before_property_validation: [SET_DEFAULT])
+    assert_isolated(schema, {}, true, { 'a' => 1, 'c' => 3 }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+  end
+
+  def test_anyOf_subschemas_see_changes_of_previous_valid_subschemas
+    # the second subschema doesn't allow `a`, set by the first one, so it's rolled back
+    schema = {
+      'anyOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 } } },
+        { 'properties' => { 'a' => false, 'b' => { 'default' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, {}, true, { 'a' => 1 }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+
+    # the second subschema sees `a` set by the first one
+    schema = {
+      'anyOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 } } },
+        { 'properties' => { 'a' => { 'const' => 1 }, 'b' => { 'default' => 2 } }, 'required' => ['a'] }
+      ]
+    }
+    assert_isolated(schema, {}, true, { 'a' => 1, 'b' => 2 }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+
+    # earlier valid subschemas aren't checked again
+    schema = {
+      'anyOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 }, 'b' => false } },
+        { 'properties' => { 'b' => { 'default' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, {}, true, { 'a' => 1, 'b' => 2 }, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
+  end
+
+  def test_anyOf_keeps_deferred_calls_of_valid_subschemas
+    calls = []
+    record = proc { |_data, key, schema| calls << [key, schema.value] }
+    schema = {
+      'anyOf' => [
+        { 'properties' => { 'a' => { 'title' => 'first' } } },
+        { 'properties' => { 'a' => { 'title' => 'second' } }, 'required' => ['missing'] },
+        { 'properties' => { 'a' => { 'title' => 'third' } } }
+      ]
+    }
+    assert(JSONSchemer.schema(schema, deferred_value_validation: [record]).valid?({ 'a' => 1 }))
+    assert_equal([['a', { 'title' => 'first' }], ['a', { 'title' => 'third' }]], calls)
+  end
+
+  def test_nested_anyOf_keeps_changes_of_valid_subschemas_only_with_valid_outer_subschema
+    schema = {
+      'anyOf' => [
+        { 'anyOf' => [{ 'properties' => { 'a' => { 'default' => 1 } } }, { 'properties' => { 'b' => { 'default' => 2 } } }], 'required' => ['missing'] },
+        { 'anyOf' => [{ 'properties' => { 'c' => { 'default' => 3 } } }, { 'properties' => { 'd' => { 'default' => 4 } } }] }
+      ]
+    }
+    assert_isolated(schema, {}, true, { 'c' => 3, 'd' => 4 }, before_property_validation: [SET_DEFAULT])
+  end
+
+  def test_oneOf_subschemas_see_the_same_data
+    # with sequential subschemas, the second one wouldn't match (`a` set by the first one) and `oneOf` would be valid
+    schema = {
+      'oneOf' => [
+        { 'properties' => { 'a' => { 'default' => 1 } } },
+        { 'properties' => { 'a' => false, 'b' => { 'default' => 2 } } }
+      ]
+    }
+    assert_isolated(schema, {}, false, {}, before_object_validation: [JSONSchemer::Schema::INSERT_PROPERTY_DEFAULT])
   end
 
   def test_oneOf_discards_all_changes_when_invalid
