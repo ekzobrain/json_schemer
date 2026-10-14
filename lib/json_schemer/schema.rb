@@ -448,6 +448,7 @@ module JSONSchemer
         compound_document['allOf'] << { '$ref' => compound_document.delete('$ref') }
       end
 
+      embedded_schemas = {}
       values = [self]
       while value = values.shift
         case value
@@ -458,14 +459,15 @@ module JSONSchemer
             ref_uri = value.ref_uri.dup
             ref_uri.fragment = nil
             ref_id = ref_uri.to_s
-            ref_schema = value.ref_schema.root
+            ref_schema = referenced_resource(value.ref_schema, ref_uri)
 
-            next if ref_schema == root || embedded_resources.key?(ref_id)
+            next if ref_schema.root.equal?(root) || embedded_resources.key?(ref_id)
 
             embedded_resource = ref_schema.value.dup
             embedded_resource[id_keyword] = ref_id
             embedded_resource['$schema'] = ref_schema.meta_schema.base_uri.to_s
             embedded_resources[ref_id] = embedded_resource
+            embedded_schemas[ref_uri] = ref_schema
 
             values << ref_schema
           else
@@ -475,6 +477,15 @@ module JSONSchemer
           values.concat(value.values)
         when Array
           values.concat(value)
+        end
+      end
+
+      # A resource embedded in another embedded resource (eg an `$id` in the `$defs` of a referenced document) is
+      # already in the compound document, with its identifier: embedding it again would identify two schemas with one
+      # URI. Removed afterwards because the resource can be reached before the one containing it.
+      embedded_schemas.each_key do |ref_uri|
+        if embedded_schemas.any? { |other_uri, other_schema| other_uri != ref_uri && contains_resource?(other_schema, ref_uri) }
+          embedded_resources.delete(ref_uri.to_s)
         end
       end
 
@@ -576,6 +587,40 @@ module JSONSchemer
     end
 
   private
+
+    # Resource identified by `uri` (without fragment) that contains `schema`: the outermost schema around it (or itself)
+    # with that base URI, ie the embedded resource with that `$id` or the document, else its document (eg identified by
+    # the URI it was retrieved from rather than its `$id`).
+    def referenced_resource(schema, uri)
+      resource = nil
+      current = schema
+      while current
+        if current.is_a?(Schema)
+          current_uri = current.base_uri
+          if current_uri == uri || (current_uri.fragment == '' && current_uri.to_s.chomp('#') == uri.to_s)
+            resource = current
+          elsif resource
+            break
+          end
+        end
+        current = current.parent
+      end
+      resource || schema.root
+    end
+
+    # Whether a resource identified by `uri` is nested in `container` (looked up by URI, since the same document can be
+    # resolved more than once).
+    def contains_resource?(container, uri)
+      lexical_resources = container.root.resources.fetch(:lexical)
+      resource = lexical_resources[uri] || lexical_resources[uri.dup.tap { |empty_fragment_uri| empty_fragment_uri.fragment = '' }]
+      return false if !resource || resource.equal?(container)
+      parent = resource.parent
+      while parent
+        return true if parent.equal?(container)
+        parent = parent.parent
+      end
+      false
+    end
 
     def parse
       @parsed = {}

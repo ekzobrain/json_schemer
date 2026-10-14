@@ -6,6 +6,7 @@
 
 - Property hook changes made while trying `anyOf`, `oneOf`, `not`, `if` and `contains` subschemas no longer leak into other subschemas or remain after failed ones.
 - `contentSchema` no longer raises with property hooks.
+- `Schema#bundle` embeds the resource a reference identifies instead of the whole document containing it (eg a `$defs` entry with its own `$id`, which was embedded as a copy of its document under its identifier), and doesn't embed a resource again when it's already inside another embedded document (`$id` declared twice in the compound document).
 - Hook changes are kept for every valid `anyOf` subschema instead of only the first one: subschemas are tried in order and see the changes of the valid ones before them (a subschema made invalid by them is rolled back), so the data satisfies the last valid subschema. `oneOf` subschemas still all see the same data.
 - `date` and `date-time` formats accept dates in the proleptic Gregorian calendar used by RFC 3339, including 1582-10-05 to 1582-10-14 (davishmcclurg/json_schemer#233).
 - `date` and `date-time` formats reject values with leading whitespace or a minus sign (eg ` 2020-09-03`, `-2020-09-03T04:05:06Z`), which `DateTime.rfc3339` accepted but RFC 3339 doesn't allow.

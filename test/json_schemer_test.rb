@@ -1142,6 +1142,108 @@ class JSONSchemerTest < Minitest::Test
     refute(bundle.valid?('nah'))
   end
 
+  BUNDLE_CARRIER = {
+    '$id' => 'http://example.test/carrier',
+    'type' => 'object',
+    'properties' => { 'x' => { '$ref' => 'http://example.test/leaf' } },
+    '$defs' => { 'leaf' => { '$id' => 'http://example.test/leaf', 'type' => 'string', 'minLength' => 2 } }
+  }.freeze
+  BUNDLE_WRAPPER = { '$id' => 'http://example.test/wrapper', '$ref' => 'http://example.test/carrier' }.freeze
+
+  def bundle_ids(compound_document)
+    ids = []
+    values = [compound_document]
+    while value = values.shift
+      case value
+      when Hash
+        ids << value.fetch('$id') if value.key?('$id')
+        values.concat(value.values)
+      when Array
+        values.concat(value)
+      end
+    end
+    ids
+  end
+
+  def test_bundle_embedded_resource
+    carrier = BUNDLE_CARRIER
+    schemer = JSONSchemer.schema(BUNDLE_WRAPPER, :ref_resolver => { URI('http://example.test/carrier') => carrier }.to_proc)
+    compound_document = schemer.bundle
+
+    # the referenced document is embedded, and the resource it contains isn't embedded again (as a copy of the document
+    # or of itself)
+    assert_equal(['http://example.test/carrier'], compound_document.fetch('$defs').keys)
+    assert_equal(
+      { '$id' => 'http://example.test/leaf', 'type' => 'string', 'minLength' => 2 },
+      compound_document.fetch('$defs').fetch('http://example.test/carrier').fetch('$defs').fetch('leaf')
+    )
+    # every identifier is declared once
+    ids = bundle_ids(compound_document)
+    assert_equal(ids.uniq, ids)
+    assert_includes(ids, 'http://example.test/leaf')
+
+    bundle = JSONSchemer.schema(compound_document)
+    assert(bundle.valid?({ 'x' => 'ok' }))
+    refute(bundle.valid?({ 'x' => 'z' }))
+    refute(bundle.valid?({ 'x' => 1 }))
+
+    # references within the bundled document aren't embedded
+    assert_equal(['leaf'], JSONSchemer.schema(carrier).bundle.fetch('$defs').keys)
+  end
+
+  def test_bundle_embedded_resource_with_relative_id
+    carrier = BUNDLE_CARRIER.merge('$defs' => { 'leaf' => { '$id' => 'leaf', 'type' => 'string', 'minLength' => 2 } })
+    schemer = JSONSchemer.schema(BUNDLE_WRAPPER, :ref_resolver => { URI('http://example.test/carrier') => carrier }.to_proc)
+    compound_document = schemer.bundle
+
+    assert_equal(['http://example.test/carrier'], compound_document.fetch('$defs').keys)
+    ids = bundle_ids(compound_document)
+    assert_equal(ids.uniq, ids)
+    bundle = JSONSchemer.schema(compound_document)
+    assert(bundle.valid?({ 'x' => 'ok' }))
+    refute(bundle.valid?({ 'x' => 'z' }))
+  end
+
+  def test_bundle_referenced_embedded_resource
+    # the resource is reached before (and from another document than) the document containing it
+    refs = {
+      URI('http://example.test/carrier') => BUNDLE_CARRIER,
+      URI('http://example.test/other') => {
+        '$id' => 'http://example.test/other',
+        'properties' => {
+          'y' => { '$ref' => 'http://example.test/carrier#/$defs/leaf' },
+          'z' => { '$ref' => 'http://example.test/carrier' }
+        }
+      }
+    }
+    schema = { '$id' => 'http://example.test/wrapper', 'allOf' => [{ '$ref' => 'http://example.test/other' }, { '$ref' => 'http://example.test/carrier' }] }
+    schemer = JSONSchemer.schema(schema, :ref_resolver => refs.to_proc)
+    compound_document = schemer.bundle
+
+    assert_equal(['http://example.test/carrier', 'http://example.test/other'], compound_document.fetch('$defs').keys.sort)
+    ids = bundle_ids(compound_document)
+    assert_equal(ids.uniq, ids)
+
+    bundle = JSONSchemer.schema(compound_document)
+    [{ 'x' => 'ok', 'y' => 'ok', 'z' => { 'x' => 'ok' } }, { 'y' => 'z' }, { 'z' => { 'x' => 'z' } }, { 'x' => 1 }].each do |instance|
+      assert_equal(schemer.valid?(instance), bundle.valid?(instance), instance.inspect)
+    end
+  end
+
+  def test_bundle_resource_embedded_in_unreferenced_document
+    # only the resource is referenced: it's embedded on its own
+    refs = { URI('http://example.test/carrier') => BUNDLE_CARRIER }
+    schema = { '$id' => 'http://example.test/wrapper', '$ref' => 'http://example.test/carrier#/$defs/leaf' }
+    compound_document = JSONSchemer.schema(schema, :ref_resolver => refs.to_proc).bundle
+    assert_equal(['http://example.test/carrier'], compound_document.fetch('$defs').keys)
+
+    refs = { URI('http://example.test/leaf') => { '$id' => 'http://example.test/leaf', 'type' => 'string', 'minLength' => 2 } }
+    schema = { '$id' => 'http://example.test/wrapper', 'properties' => { 'x' => { '$ref' => 'leaf' } } }
+    compound_document = JSONSchemer.schema(schema, :ref_resolver => refs.to_proc).bundle
+    assert_equal(['http://example.test/leaf'], compound_document.fetch('$defs').keys)
+    assert_equal({ '$id' => 'http://example.test/leaf', 'type' => 'string', 'minLength' => 2, '$schema' => JSONSchemer::Draft202012::BASE_URI.to_s }, compound_document.fetch('$defs').fetch('http://example.test/leaf'))
+  end
+
   def test_custom_content_encodings_and_media_types
     data = '😊'
     instance = Base64.urlsafe_encode64(data)
