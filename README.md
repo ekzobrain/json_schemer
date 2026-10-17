@@ -200,6 +200,16 @@ JSONSchemer.schema(
     end
   },
 
+  # custom keywords, called with the instance, the schema containing the keyword and the instance location
+  # return true when valid, false or a message when invalid, or an array of those
+  # a message is used as the keyword's error: "value at `/a` is more than 10"
+  # (classic output also has it as `type`)
+  keywords: {
+    'limited' => proc do |instance, _schema, _instance_location|
+      instance.is_a?(Integer) && instance > 10 ? 'is more than 10' : true
+    end
+  },
+
   # insert default property values after validation (and validate again)
   # see "Default Values" below for a single pass alternative
   # string keys by default (use `:symbol` to insert symbol keys)

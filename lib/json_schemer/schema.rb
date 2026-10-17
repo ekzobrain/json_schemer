@@ -141,6 +141,11 @@ module JSONSchemer
       @custom_keywords ||= @configuration.keywords
     end
 
+    # Sources of custom keyword results (see `CustomKeyword`), by keyword.
+    def custom_keyword_instances
+      @custom_keyword_instances ||= {}
+    end
+
     def before_object_validation
       @before_object_validation ||= @configuration.before_object_validation
     end
@@ -324,11 +329,10 @@ module JSONSchemer
           root.custom_keywords.each do |custom_keyword, callable|
             if value.key?(custom_keyword)
               [*callable.call(instance, value, resolved_instance_location)].each do |custom_keyword_result|
-                custom_keyword_valid = custom_keyword_result == true
-                valid &&= custom_keyword_valid
-                type = custom_keyword_result.is_a?(String) ? custom_keyword_result : custom_keyword
-                details = { 'keyword' => custom_keyword, 'result' => custom_keyword_result }
-                nested << result(instance, instance_location, keyword_location, custom_keyword_valid, :type => type, :details => details) if result_tree
+                valid &&= custom_keyword_result == true
+                next unless result_tree
+                custom_keyword_instance = custom_keyword_instances[custom_keyword] ||= CustomKeyword.new(value.fetch(custom_keyword), self, custom_keyword)
+                nested << custom_keyword_instance.custom_result(instance, instance_location, join_location(keyword_location, custom_keyword), custom_keyword_result)
               end
             end
           end

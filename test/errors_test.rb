@@ -161,6 +161,64 @@ class ErrorsTest < Minitest::Test
     assert_match(optional_space_regexp('missing {"missing_keys"', '=>', '["yah"]} ["yah"]'), schemer.validate(data, :output_format => 'detailed').fetch('error'))
   end
 
+  LIMITED = lambda do |instance, _schema, _instance_location|
+    instance.is_a?(Integer) && instance > 10 ? 'is more than 10' : true
+  end
+
+  def test_custom_keyword_error
+    schemer = JSONSchemer.schema(
+      { 'type' => 'object', 'properties' => { 'a' => { 'type' => 'integer', 'limited' => true } } },
+      :keywords => { 'limited' => LIMITED }
+    )
+    expected = {
+      'valid' => false,
+      'keywordLocation' => '/properties/a/limited',
+      'absoluteKeywordLocation' => 'json-schemer://schema#/properties/a/limited',
+      'instanceLocation' => '/a',
+      'error' => 'value at `/a` is more than 10'
+    }
+    assert_equal(expected, schemer.validate({ 'a' => 11 }, :output_format => 'detailed'))
+    assert_equal([expected], schemer.validate({ 'a' => 11 }, :output_format => 'basic').fetch('errors').to_a)
+    assert(schemer.validate({ 'a' => 10 }, :output_format => 'detailed').fetch('valid'))
+
+    error = schemer.validate({ 'a' => 11 }).first
+    assert_equal('value at `/a` is more than 10', error.fetch('error'))
+    assert_equal('is more than 10', error.fetch('type'))
+    assert_equal({ 'keyword' => 'limited', 'result' => 'is more than 10' }, error.fetch('details'))
+    assert_equal('/properties/a', error.fetch('schema_pointer'))
+    assert_equal('/a', error.fetch('data_pointer'))
+  end
+
+  def test_custom_keyword_error_without_message
+    schemer = JSONSchemer.schema({ 'even' => true }, :keywords => { 'even' => ->(instance, *) { instance.even? } })
+    output = schemer.validate(3, :output_format => 'detailed')
+    assert_equal('/even', output.fetch('keywordLocation'))
+    assert_equal('value at root does not match schema', output.fetch('error'))
+    error = schemer.validate(3).first
+    assert_equal('even', error.fetch('type'))
+    assert_equal('value at root does not match schema', error.fetch('error'))
+  end
+
+  def test_custom_keyword_errors
+    schemer = JSONSchemer.schema({ 'two' => true }, :keywords => { 'two' => ->(instance, *) { instance == 2 ? [] : [false, 'is not two', 'is odd'] } })
+    keyword_errors = schemer.validate(3, :output_format => 'basic').fetch('errors').select { |error| error.fetch('keywordLocation') == '/two' }
+    assert_equal(['value at root does not match schema', 'value at root is not two', 'value at root is odd'], keyword_errors.map { |error| error.fetch('error') })
+    assert_equal(['two', 'is not two', 'is odd'], schemer.validate(3).map { |error| error.fetch('type') })
+  end
+
+  def test_custom_keyword_x_error_and_i18n
+    schema = { '$id' => 'https://example.com/schema', 'properties' => { 'a' => { 'limited' => true } } }
+    x_error_schema = { 'properties' => { 'a' => { 'limited' => true, 'x-error' => { 'limited' => '%{keywordLocation}: %{details__result}' } } } }
+    assert_equal('/properties/a/limited: is more than 10', JSONSchemer.schema(x_error_schema, :keywords => { 'limited' => LIMITED }).validate({ 'a' => 11 }, :output_format => 'detailed').fetch('error'))
+
+    i18n({ 'https://example.com/schema#/properties/a/limited' => 'too big (%{details__result})' }) do
+      assert_equal('too big (is more than 10)', JSONSchemer.schema(schema, :keywords => { 'limited' => LIMITED }).validate({ 'a' => 11 }, :output_format => 'detailed').fetch('error'))
+    end
+    i18n({ 'limited' => 'limited by keyword name' }) do
+      assert_equal('limited by keyword name', JSONSchemer.schema(schema, :keywords => { 'limited' => LIMITED }).validate({ 'a' => 11 }).first.fetch('error'))
+    end
+  end
+
   def test_i18n_details_as_hash
     schema = {
       'properties' => {

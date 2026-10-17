@@ -175,4 +175,25 @@ module JSONSchemer
     end
 
   end
+
+  # Source of the results of a custom keyword (`keywords` option), so that they're located at the keyword and use its
+  # error message, `x-error` and I18n translations like other keywords.
+  class CustomKeyword < Keyword
+    def error(formatted_instance_location:, details: nil, **)
+      message = details && details['result']
+      if message.is_a?(String)
+        "value at #{formatted_instance_location} #{message}"
+      else
+        "value at #{formatted_instance_location} does not match schema"
+      end
+    end
+
+    # `custom_keyword_result` is what the keyword's callable returned (or one of the values it returned).
+    def custom_result(instance, instance_location, keyword_location, custom_keyword_result)
+      valid = custom_keyword_result == true
+      type = custom_keyword_result.is_a?(String) ? custom_keyword_result : keyword
+      details = { 'keyword' => keyword, 'result' => custom_keyword_result }
+      result(instance, instance_location, keyword_location, valid, :type => type, :details => details)
+    end
+  end
 end
