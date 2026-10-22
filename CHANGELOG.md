@@ -16,6 +16,7 @@
 ### Features
 
 - `deep: true` for `valid_schema?`/`validate_schema` (of `JSONSchemer` and `Schema`): references are resolved, unresolvable ones reported as validation errors, and every referenced document is validated against its own meta schema, with errors located in their document (`absoluteInstanceLocation`/`data_uri`). `max_documents` limits the documents retrieved.
+- `deep: true` for `OpenAPI#valid?`/`#validate`: Reference Objects are resolved relative to their document and their targets validated against the document schema's definition of the object expected at their position, Schema Objects validated against their dialect with their references (and `discriminator` mappings) resolved, through every document they lead to (3.1+: identifiers declared in any document reachable are indexed first). Errors are located in their document and have the kind of object `expected`.
 - `stringified_keys` option to skip key conversion for string-keyed schemas and data (davishmcclurg/json_schemer#236), and allocation optimizations (davishmcclurg/json_schemer#235).
 - `before_object_validation` hook, called before any keyword of a schema with `properties` validates an object.
 - `before_value_validation` and `after_value_validation` hooks, called before and after each value in an object or array is validated (`properties`, `patternProperties`, `additionalProperties`, `unevaluatedProperties`, `prefixItems`, `items`, `additionalItems`, `unevaluatedItems`, `contains`).

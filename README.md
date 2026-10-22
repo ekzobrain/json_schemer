@@ -878,6 +878,40 @@ document.ref('#/components/schemas/example').valid?('one')
 # => false
 ```
 
+### Deep Validation
+
+`document.valid?` and `document.validate` check the entry document against the document schema of its version: Reference Objects pass as references, and the objects they point at (in the same document or in other files) aren't looked up. With `deep: true` the whole description is validated:
+
+- every Reference Object (and Path Item `$ref`) is resolved with `ref_resolver`, relative to the document it's written in (its `$self` in 3.2), and its target validated against the document schema's definition of the object expected at that position (3.0 `#/definitions/Parameter`, `Response`, `PathItem`, ...; 3.1/3.2 `#/$defs/parameter`, `response`, `path-item`, ...), then walked in turn: Path Items, operations, parameters, request bodies, responses, headers, media types, encodings, examples, links, callbacks, security schemes and components (`webhooks`, `pathItems` in 3.1+, `mediaTypes`, `query`, `additionalOperations`, `itemSchema` and nested encodings in 3.2);
+- every Schema Object at those positions is validated against its dialect (3.0 the Schema Object definition; 3.1/3.2 its `$schema`, its document's, `jsonSchemaDialect` or the OAS dialect) and its references resolved, through the documents they lead to (`discriminator` mappings included). In 3.1/3.2, the identifiers (`$id`) declared in the documents reachable by reference are indexed first, so that a reference to one declared in another document is resolved (an identifier wins over a retrieval URL);
+- a reference that can't be resolved (a document the resolver doesn't return, a missing pointer or anchor) is a validation error, located where it's written, with `ref`.
+
+Errors are located like with deep schema validation (`absoluteInstanceLocation`/`data_uri`: the document URI and the pointer in it), and errors found by validating an object against a definition have the kind of object expected as `expected` (and the definition in their `keywordLocation`). Every document is retrieved once and every object visited once, so circular references end; `max_documents` limits the documents retrieved. Like the entry document, a document referred to only in parts (eg a file of shared components) is validated where it's referred to.
+
+```ruby
+files = {
+  'file:///openapi.yaml' => YAML.safe_load(File.read('openapi.yaml')),
+  'file:///common.yaml' => YAML.safe_load(File.read('common.yaml'))
+}
+document = JSONSchemer.openapi(
+  files.fetch('file:///openapi.yaml'),
+  :base_uri => URI('file:///openapi.yaml'),
+  :ref_resolver => proc { |uri| files[uri.to_s] }
+)
+
+document.valid?(:deep => true)
+# => false
+
+document.validate(:deep => true, :output_format => 'basic').fetch('errors')
+# => [{"valid"=>false,
+#      "keywordLocation"=>"/definitions/Response/required",
+#      "absoluteKeywordLocation"=>"https://spec.openapis.org/oas/3.0/schema/2021-09-28#/definitions/Response/required",
+#      "instanceLocation"=>"/components/responses/NotFound",
+#      "error"=>"object at `/components/responses/NotFound` is missing required properties: description",
+#      "expected"=>"Response",
+#      "absoluteInstanceLocation"=>"file:///common.yaml#/components/responses/NotFound"}]
+```
+
 ## CLI
 
 The `json_schemer` executable takes a JSON schema file as the first argument followed by one or more JSON data files to validate. If there are any validation errors, it outputs them and returns an error code.

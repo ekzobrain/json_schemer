@@ -1,0 +1,26 @@
+get:
+  summary: List pets
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: The pets
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: ../schemas/pet.yaml
+post:
+  summary: Create a pet
+  requestBody:
+    content:
+      application/json:
+        schema:
+          $ref: ../schemas/pet.yaml
+  responses:
+    "201":
+      description: Created

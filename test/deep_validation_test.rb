@@ -120,6 +120,21 @@ class DeepValidationTest < Minitest::Test
     assert_equal(["value at `/$ref` references `a.json`, which can't be resolved: https://example.com/unknown"], output.map { |error| error.fetch('error') })
   end
 
+  def test_referenced_document_with_unknown_meta_schema
+    documents = { 'file:///a.json' => { '$schema' => 'https://example.com/unknown' } }
+    assert_equal(['file:///a.json#'], error_locations(deep({ '$ref' => 'a.json' }, documents)))
+
+    # in a subschema: the document is valid, but can't be compiled
+    documents = { 'file:///a.json' => { '$defs' => { 'b' => { '$schema' => 'https://example.com/unknown' } } } }
+    output = deep({ '$ref' => 'a.json' }, documents)
+    assert_equal(["value at `/$ref` references `a.json`, which can't be resolved: `https://example.com/unknown` can't be retrieved"], output.map { |error| error.fetch('error') })
+  end
+
+  def test_missing_local_anchor
+    output = deep({ '$ref' => '#missing' }, {})
+    assert_equal(["value at `/$ref` references `#missing`, which doesn't exist in `file:///root.json`"], output.map { |error| error.fetch('error') })
+  end
+
   def test_flag_output_with_reference_errors
     assert_equal({ 'valid' => false }, deep({ '$ref' => 'missing.json' }, {}, :output_format => 'flag'))
     refute(JSONSchemer.valid_schema?({ '$ref' => 'missing.json' }, :deep => true))

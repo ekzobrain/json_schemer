@@ -1,0 +1,46 @@
+# An OpenAPI 3.0 description split across files: a Path Item, a parameter, a response and schemas live
+# elsewhere, schemas refer to one another across files and in a circle
+openapi: 3.0.3
+info:
+  title: Split Pets
+  version: 1.0.0
+servers:
+  - url: https://pets.example.com/v1
+paths:
+  /pets:
+    $ref: paths/pets.yaml
+  /pets/{id}:
+    get:
+      summary: Get a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+        - $ref: common.yaml#/components/parameters/Verbose
+      responses:
+        "200":
+          description: The pet
+          content:
+            application/json:
+              schema:
+                $ref: schemas/pet.yaml
+        "404":
+          $ref: common.yaml#/components/responses/NotFound
+  /trees:
+    get:
+      summary: A tree
+      responses:
+        "200":
+          description: The tree
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tree"
+components:
+  schemas:
+    Tree:
+      $ref: schemas/node.yaml

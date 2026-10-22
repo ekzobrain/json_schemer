@@ -258,6 +258,17 @@ module JSONSchemer
       output
     end
 
+    # Validates a part of a document, at `pointer` in it, so that instance locations (and error messages) are located in
+    # the document (used by `DeepValidation`). Hooks and property defaults aren't supported: they work on whole
+    # documents.
+    def validate_located(instance, pointer, output_format)
+      instance_location = Location.root
+      Hana::Pointer.parse(pointer).each { |token| instance_location = Location.join(instance_location, token) }
+      short_circuit = output_format == 'flag'
+      context = Context.new(instance, [], nil, short_circuit, @configuration.access_mode, false, nil, nil, [], !short_circuit)
+      validate_instance(deep_stringify_keys(instance), instance_location, root_keyword_location, context).output(output_format)
+    end
+
     # Whether one of the keywords reads the results of its subschemas (so they need to be kept in full).
     def result_tree_keywords?
       return @result_tree_keywords if defined?(@result_tree_keywords)

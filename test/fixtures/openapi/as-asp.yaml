@@ -1,0 +1,186 @@
+openapi: 3.1.0
+info:
+  title: АС АСП
+  version: '1.0'
+  description: >-
+    Сервис АС АСП (автоматизированная система адресной социальной помощи)
+    субъекта РФ: по массиву СНИЛС возвращает льготные категории каждого
+    получателя и периоды их действия.
+
+
+    Сервис состоит из одной операции, путь которой в описании АПИ не задан
+    («POST {путь к системе региона}»), поэтому операция объявлена в корне: полный
+    адрес целиком определяется базовым путём подключения.
+
+
+    Адрес — это адрес сервера, который отвечает за АС АСП, то есть самого Relay,
+    а не какой-то внешней системы: подключение входящее.
+
+
+    Правила формирования ответа:
+
+    * если по СНИЛС нет данных, он в ответе не возвращается;
+
+    * если данных нет ни по одному СНИЛС из запроса, возвращается пустой массив;
+
+    * если по СНИЛС есть данные, но нет данных по типу сертификата, данные
+      возвращаются без сертификата.
+servers:
+  - url: http://url.invalid/as-asp
+    description: >-
+      Заведомо нерезолвимый адрес: секция обязательна по спецификации, но для
+      входящего подключения адрес задаёт само подключение, а не схема. Хост
+      в домене .invalid (RFC 2606) — чтобы никто не принял его за настоящий.
+paths:
+  /:
+    post:
+      operationId: getRecipientCategories
+      summary: Запрос сведений о льготных категориях пользователей
+      description: >-
+        Принимает массив СНИЛС и возвращает по каждому известному системе СНИЛС
+        перечень льготных категорий с периодами их действия.
+      tags:
+        - Льготные категории
+      security:
+        - basic: []
+      requestBody:
+        required: true
+        description: Массив СНИЛС
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnilsList'
+      responses:
+        '200':
+          description: >-
+            Сведения о льготных категориях. Массив содержит по одному элементу на
+            каждый известный системе СНИЛС из запроса и пуст, если данных нет ни
+            по одному из них.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientList'
+        '400':
+          description: Тело запроса не удалось разобрать
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: >-
+            Тело разобрано, но не соответствует схеме: `details` перечисляет
+            несоответствия по отдельности.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Неверные учётные данные либо их отсутствие
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервиса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    basic:
+      type: http
+      scheme: basic
+      description: >-
+        Логин и пароль, выданные потребителю. В параметрах подключения задаются
+        одной строкой вида «логин:пароль».
+  schemas:
+    Snils:
+      type: string
+      title: СНИЛС
+      description: СНИЛС получателя, 11 цифр без разделителей
+      pattern: '^[0-9]{11}$'
+      examples:
+        - '12345678910'
+    SnilsList:
+      type: array
+      title: Массив СНИЛС
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/Snils'
+      examples:
+        - - '12345678910'
+          - '98765432100'
+    RecipientList:
+      type: array
+      title: Сведения о получателях
+      items:
+        $ref: '#/components/schemas/Recipient'
+    Recipient:
+      type: object
+      title: Сведения о получателе
+      required:
+        - recipientSnils
+        - recipientCategories
+      properties:
+        recipientSnils:
+          $ref: '#/components/schemas/Snils'
+        recipientCategories:
+          type: array
+          title: Льготные категории
+          description: Массив объектов с описанием льготных категорий
+          items:
+            $ref: '#/components/schemas/Category'
+    Category:
+      type: object
+      title: Льготная категория
+      required:
+        - id
+        - name
+        - startDate
+        - endDate
+      properties:
+        id:
+          type: string
+          title: Код льготной категории
+          examples:
+            - '3160000'
+        name:
+          type: string
+          title: Наименование льготной категории
+          examples:
+            - Ветеран труда
+        startDate:
+          type: string
+          title: Дата начала действия льготной категории
+          description: Дата в формате ДД.ММ.ГГГГ
+          pattern: '^[0-9]{2}\.[0-9]{2}\.[0-9]{4}$'
+          examples:
+            - '01.01.2025'
+        endDate:
+          type: string
+          title: Дата окончания действия льготной категории
+          description: >-
+            Дата в формате ДД.ММ.ГГГГ либо значение «Бессрочно», если срок
+            действия категории не ограничен.
+          pattern: '^([0-9]{2}\.[0-9]{2}\.[0-9]{4}|Бессрочно)$'
+          examples:
+            - '31.12.2025'
+            - Бессрочно
+    Error:
+      type: object
+      title: Ошибка
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          title: Описание ошибки
+        details:
+          type: array
+          title: Отдельные причины отказа
+          description: >-
+            Заполняется, когда проверка выдала перечень несоответствий; при
+            одной причине повторяет `error`.
+          items:
+            type: string

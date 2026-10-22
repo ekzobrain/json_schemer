@@ -70,25 +70,32 @@ module JSONSchemer
     end
 
     def output
+      # the same value can be validated more than once (eg reached by references and by its position)
+      errors = @errors.uniq { |error| [error[output_format == 'basic' ? 'absoluteInstanceLocation' : 'data_uri'], error['error']] }
       case output_format
       when 'flag'
         { 'valid' => @valid }
       when 'basic'
-        { 'valid' => @valid, 'errors' => @errors }
+        { 'valid' => @valid, 'errors' => errors }
       else
-        @errors
+        errors
       end
     end
 
-    # Validates a document against its meta schema, adding its errors (located in the document). Returns whether it's
-    # valid.
-    def validate_document(value, document_uri, meta_schema)
+    # Validates a document (or the part of it at `pointer`) against a (meta) schema, adding its errors, located in the
+    # document. `expected` is added to the errors (eg the kind of OpenAPI object) and `keyword_prefix` to their keyword
+    # locations. Returns whether it's valid.
+    def validate_document(value, document_uri, meta_schema, pointer = '', expected = nil, keyword_prefix = '')
       if output_format == 'flag'
         valid = meta_schema.valid?(value)
       else
-        output = meta_schema.validate(value, :output_format => output_format == 'basic' ? 'basic' : 'classic')
+        output = meta_schema.validate_located(value, pointer, output_format)
         errors = output_format == 'basic' ? (output['errors'] || []).to_a : output.to_a
-        errors.each { |error| @errors << locate(error, document_uri) }
+        errors.each do |error|
+          error['keywordLocation'] = "#{keyword_prefix}#{error.fetch('keywordLocation')}" if output_format == 'basic'
+          error['expected'] = expected if expected
+          @errors << locate(error, document_uri)
+        end
         valid = output_format == 'basic' ? output.fetch('valid') : errors.empty?
       end
       @valid &&= valid
@@ -96,7 +103,7 @@ module JSONSchemer
     end
 
     # Adds an error (eg an unresolvable reference) at `pointer` in a document.
-    def add_error(document_uri, pointer, message, type, ref = nil)
+    def add_error(document_uri, pointer, message, type, ref = nil, expected = nil)
       @valid = false
       return if output_format == 'flag'
       formatted_location = pointer.empty? ? 'root' : "`#{pointer}`"
@@ -115,6 +122,7 @@ module JSONSchemer
         }
       end
       error['ref'] = ref if ref
+      error['expected'] = expected if expected
       @errors << locate(error, document_uri)
     end
 
@@ -177,7 +185,12 @@ module JSONSchemer
       rescue InvalidRefPointer => e
         add_error(document_uri, pointer, "references `#{keyword.value}`, but pointer `#{e.message}` doesn't exist in `#{target_uri}`", 'ref', ref)
         return
-      rescue InvalidRefResolution, UnknownRef, KeyError
+      rescue InvalidRefResolution, UnknownRef => e
+        # the target missing, or another document needed to compile it (eg its meta schema)
+        message = e.message.start_with?(target_uri.to_s) ? "which doesn't exist in `#{target_uri}`" : "which can't be resolved: `#{e.message}` can't be retrieved"
+        add_error(document_uri, pointer, "references `#{keyword.value}`, #{message}", 'ref', ref)
+        return
+      rescue KeyError
         add_error(document_uri, pointer, "references `#{keyword.value}`, which doesn't exist in `#{target_uri}`", 'ref', ref)
         return
       rescue StandardError => e
@@ -216,20 +229,27 @@ module JSONSchemer
     end
 
     def pointer_exists?(value, pointer)
+      !value_at(value, pointer).equal?(MISSING)
+    end
+
+    MISSING = Object.new.freeze
+    private_constant :MISSING
+
+    # Value at a JSON pointer in a document, or `MISSING`.
+    def value_at(value, pointer)
       Hana::Pointer.parse(pointer).reduce(value) do |current, token|
         case current
         when Hash
-          return false unless current.key?(token)
+          return MISSING unless current.key?(token)
           current.fetch(token)
         when Array
-          index = Integer(token, 10) rescue (return false)
-          return false unless index >= 0 && index < current.size
+          index = Integer(token, 10) rescue (return MISSING)
+          return MISSING unless index >= 0 && index < current.size
           current.fetch(index)
         else
-          return false
+          return MISSING
         end
       end
-      true
     end
 
     def local_resource?(root, uri)

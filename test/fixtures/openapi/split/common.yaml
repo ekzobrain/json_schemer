@@ -1,0 +1,29 @@
+components:
+  parameters:
+    Verbose:
+      name: verbose
+      in: query
+      schema:
+        type: boolean
+  responses:
+    NotFound:
+      description: Nothing there
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+          nullable: true
+          example: not found
+    Tag:
+      type: string
+      enum: [cat, dog]
+      nullable: true

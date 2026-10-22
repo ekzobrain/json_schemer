@@ -1,0 +1,9 @@
+type: object
+required: [name]
+properties:
+  name:
+    type: string
+  tag:
+    $ref: ../common.yaml#/components/schemas/Tag
+  category:
+    $ref: category.json

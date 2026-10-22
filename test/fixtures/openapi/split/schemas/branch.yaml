@@ -1,0 +1,6 @@
+type: object
+properties:
+  weight:
+    type: number
+  node:
+    $ref: node.yaml
