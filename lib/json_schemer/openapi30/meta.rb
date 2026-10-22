@@ -17,8 +17,8 @@ module JSONSchemer
         { '$ref' => 'http://json-schema.org/draft-04/schema#' },
         {
           'oneOf' => [
-            { '$ref' => 'https://spec.openapis.org/oas/3.0/schema/2021-09-28#/definitions/Schema' },
-            { '$ref' => 'https://spec.openapis.org/oas/3.0/schema/2021-09-28#/definitions/Reference' }
+            { '$ref' => 'https://spec.openapis.org/oas/3.0/schema/2024-10-18#/definitions/Schema' },
+            { '$ref' => 'https://spec.openapis.org/oas/3.0/schema/2024-10-18#/definitions/Reference' }
           ]
         }
       ]
@@ -27,7 +27,7 @@ module JSONSchemer
     module Meta
       SCHEMAS = {
         Draft4::BASE_URI.dup.tap { |uri| uri.fragment = nil } => Draft4::SCHEMA,
-        URI('https://spec.openapis.org/oas/3.0/schema/2021-09-28') => Document::SCHEMA
+        URI('https://spec.openapis.org/oas/3.0/schema/2024-10-18') => Document::SCHEMA
       }
     end
   end

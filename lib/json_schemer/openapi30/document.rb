@@ -3,9 +3,9 @@ module JSONSchemer
   module OpenAPI30
     module Document
       SCHEMA = {
-        'id' => 'https://spec.openapis.org/oas/3.0/schema/2021-09-28',
+        'id' => 'https://spec.openapis.org/oas/3.0/schema/2024-10-18',
         '$schema' => 'http://json-schema.org/draft-04/schema#',
-        'description' => 'The description of OpenAPI v3.0.x documents, as defined by https://spec.openapis.org/oas/v3.0.3',
+        'description' => 'The description of OpenAPI v3.0.x Documents',
         'type' => 'object',
         'required' => [
           'openapi',
@@ -50,8 +50,7 @@ module JSONSchemer
           }
         },
         'patternProperties' => {
-          '^x-' => {
-          }
+          '^x-' => {}
         },
         'additionalProperties' => false,
         'definitions' => {
@@ -95,8 +94,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -116,8 +114,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -136,8 +133,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -161,8 +157,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -186,8 +181,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -331,8 +325,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -406,8 +399,7 @@ module JSONSchemer
               },
               'enum' => {
                 'type' => 'array',
-                'items' => {
-                },
+                'items' => {},
                 'minItems' => 1,
                 'uniqueItems' => false
               },
@@ -514,8 +506,7 @@ module JSONSchemer
               'format' => {
                 'type' => 'string'
               },
-              'default' => {
-              },
+              'default' => {},
               'nullable' => {
                 'type' => 'boolean',
                 'default' => false
@@ -531,8 +522,7 @@ module JSONSchemer
                 'type' => 'boolean',
                 'default' => false
               },
-              'example' => {
-              },
+              'example' => {},
               'externalDocs' => {
                 '$ref' => '#/definitions/ExternalDocumentation'
               },
@@ -545,8 +535,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -590,8 +579,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -638,8 +626,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -656,8 +643,7 @@ module JSONSchemer
                   }
                 ]
               },
-              'example' => {
-              },
+              'example' => {},
               'examples' => {
                 'type' => 'object',
                 'additionalProperties' => {
@@ -679,8 +665,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false,
             'allOf' => [
@@ -698,16 +683,14 @@ module JSONSchemer
               'description' => {
                 'type' => 'string'
               },
-              'value' => {
-              },
+              'value' => {},
               'externalValue' => {
                 'type' => 'string',
                 'format' => 'uri-reference'
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -761,8 +744,7 @@ module JSONSchemer
                 'minProperties' => 1,
                 'maxProperties' => 1
               },
-              'example' => {
-              },
+              'example' => {},
               'examples' => {
                 'type' => 'object',
                 'additionalProperties' => {
@@ -778,8 +760,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false,
             'allOf' => [
@@ -797,8 +778,7 @@ module JSONSchemer
               '^\/' => {
                 '$ref' => '#/definitions/PathItem'
               },
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -813,6 +793,30 @@ module JSONSchemer
               },
               'description' => {
                 'type' => 'string'
+              },
+              'get' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'put' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'post' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'delete' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'options' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'head' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'patch' => {
+                '$ref' => '#/definitions/Operation'
+              },
+              'trace' => {
+                '$ref' => '#/definitions/Operation'
               },
               'servers' => {
                 'type' => 'array',
@@ -836,11 +840,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^(get|put|post|delete|options|head|patch|trace)$' => {
-                '$ref' => '#/definitions/Operation'
-              },
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -926,8 +926,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -956,8 +955,7 @@ module JSONSchemer
                   }
                 ]
               },
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'minProperties' => 1,
             'additionalProperties' => false
@@ -988,8 +986,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1008,8 +1005,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1133,8 +1129,7 @@ module JSONSchemer
                 'minProperties' => 1,
                 'maxProperties' => 1
               },
-              'example' => {
-              },
+              'example' => {},
               'examples' => {
                 'type' => 'object',
                 'additionalProperties' => {
@@ -1150,8 +1145,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false,
             'required' => [
@@ -1164,93 +1158,99 @@ module JSONSchemer
               },
               {
                 '$ref' => '#/definitions/SchemaXORContent'
+              }
+            ],
+            'oneOf' => [
+              {
+                '$ref' => '#/definitions/PathParameter'
               },
               {
-                '$ref' => '#/definitions/ParameterLocation'
+                '$ref' => '#/definitions/QueryParameter'
+              },
+              {
+                '$ref' => '#/definitions/HeaderParameter'
+              },
+              {
+                '$ref' => '#/definitions/CookieParameter'
               }
             ]
           },
-          'ParameterLocation' => {
-            'description' => 'Parameter location',
-            'oneOf' => [
-              {
-                'description' => 'Parameter in path',
-                'required' => [
-                  'required'
+          'PathParameter' => {
+            'description' => 'Parameter in path',
+            'required' => [
+              'required'
+            ],
+            'properties' => {
+              'in' => {
+                'enum' => [
+                  'path'
+                ]
+              },
+              'style' => {
+                'enum' => [
+                  'matrix',
+                  'label',
+                  'simple'
                 ],
-                'properties' => {
-                  'in' => {
-                    'enum' => [
-                      'path'
-                    ]
-                  },
-                  'style' => {
-                    'enum' => [
-                      'matrix',
-                      'label',
-                      'simple'
-                    ],
-                    'default' => 'simple'
-                  },
-                  'required' => {
-                    'enum' => [
-                      true
-                    ]
-                  }
-                }
+                'default' => 'simple'
               },
-              {
-                'description' => 'Parameter in query',
-                'properties' => {
-                  'in' => {
-                    'enum' => [
-                      'query'
-                    ]
-                  },
-                  'style' => {
-                    'enum' => [
-                      'form',
-                      'spaceDelimited',
-                      'pipeDelimited',
-                      'deepObject'
-                    ],
-                    'default' => 'form'
-                  }
-                }
-              },
-              {
-                'description' => 'Parameter in header',
-                'properties' => {
-                  'in' => {
-                    'enum' => [
-                      'header'
-                    ]
-                  },
-                  'style' => {
-                    'enum' => [
-                      'simple'
-                    ],
-                    'default' => 'simple'
-                  }
-                }
-              },
-              {
-                'description' => 'Parameter in cookie',
-                'properties' => {
-                  'in' => {
-                    'enum' => [
-                      'cookie'
-                    ]
-                  },
-                  'style' => {
-                    'enum' => [
-                      'form'
-                    ],
-                    'default' => 'form'
-                  }
-                }
+              'required' => {
+                'enum' => [
+                  true
+                ]
               }
-            ]
+            }
+          },
+          'QueryParameter' => {
+            'description' => 'Parameter in query',
+            'properties' => {
+              'in' => {
+                'enum' => [
+                  'query'
+                ]
+              },
+              'style' => {
+                'enum' => [
+                  'form',
+                  'spaceDelimited',
+                  'pipeDelimited',
+                  'deepObject'
+                ],
+                'default' => 'form'
+              }
+            }
+          },
+          'HeaderParameter' => {
+            'description' => 'Parameter in header',
+            'properties' => {
+              'in' => {
+                'enum' => [
+                  'header'
+                ]
+              },
+              'style' => {
+                'enum' => [
+                  'simple'
+                ],
+                'default' => 'simple'
+              }
+            }
+          },
+          'CookieParameter' => {
+            'description' => 'Parameter in cookie',
+            'properties' => {
+              'in' => {
+                'enum' => [
+                  'cookie'
+                ]
+              },
+              'style' => {
+                'enum' => [
+                  'form'
+                ],
+                'default' => 'form'
+              }
+            }
           },
           'RequestBody' => {
             'type' => 'object',
@@ -1273,8 +1273,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1324,8 +1323,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1353,8 +1351,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false,
             'oneOf' => [
@@ -1406,8 +1403,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1433,8 +1429,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1455,8 +1450,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1483,8 +1477,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1511,8 +1504,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1539,8 +1531,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1572,8 +1563,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false
           },
@@ -1584,15 +1574,14 @@ module JSONSchemer
                 'type' => 'string'
               },
               'operationRef' => {
-                'type' => 'string'
+                'type' => 'string',
+                'format' => 'uri-reference'
               },
               'parameters' => {
                 'type' => 'object',
-                'additionalProperties' => {
-                }
+                'additionalProperties' => {}
               },
-              'requestBody' => {
-              },
+              'requestBody' => {},
               'description' => {
                 'type' => 'string'
               },
@@ -1601,8 +1590,7 @@ module JSONSchemer
               }
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             },
             'additionalProperties' => false,
             'not' => {
@@ -1619,8 +1607,7 @@ module JSONSchemer
               '$ref' => '#/definitions/PathItem'
             },
             'patternProperties' => {
-              '^x-' => {
-              }
+              '^x-' => {}
             }
           },
           'Encoding' => {
@@ -1658,6 +1645,9 @@ module JSONSchemer
                 'type' => 'boolean',
                 'default' => false
               }
+            },
+            'patternProperties' => {
+              '^x-' => {}
             },
             'additionalProperties' => false
           }

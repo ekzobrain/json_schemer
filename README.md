@@ -905,7 +905,7 @@ document.valid?(:deep => true)
 document.validate(:deep => true, :output_format => 'basic').fetch('errors')
 # => [{"valid"=>false,
 #      "keywordLocation"=>"/definitions/Response/required",
-#      "absoluteKeywordLocation"=>"https://spec.openapis.org/oas/3.0/schema/2021-09-28#/definitions/Response/required",
+#      "absoluteKeywordLocation"=>"https://spec.openapis.org/oas/3.0/schema/2024-10-18#/definitions/Response/required",
 #      "instanceLocation"=>"/components/responses/NotFound",
 #      "error"=>"object at `/components/responses/NotFound` is missing required properties: description",
 #      "expected"=>"Response",

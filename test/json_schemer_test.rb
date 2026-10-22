@@ -1027,9 +1027,8 @@ class JSONSchemerTest < Minitest::Test
       JSONSchemer::OpenAPI32::SCHEMA,
       JSONSchemer::OpenAPI32::Meta::BASE,
       JSONSchemer::OpenAPI32::Document::SCHEMA,
-      # fixme: https://github.com/OAI/OpenAPI-Specification/pull/3455
-      # JSONSchemer::OpenAPI31::Document::SCHEMA,
-      # JSONSchemer::OpenAPI30::Document::SCHEMA
+      JSONSchemer::OpenAPI31::Document::SCHEMA,
+      JSONSchemer::OpenAPI30::Document::SCHEMA
     ].each do |meta_schema|
       id = meta_schema.key?('$id') ? meta_schema.fetch('$id') : meta_schema.fetch('id')
       assert_equal(meta_schema, JSON.parse(fetch(id)))

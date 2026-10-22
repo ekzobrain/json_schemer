@@ -1097,6 +1097,25 @@ class OpenAPITest < Minitest::Test
     assert_raises(JSONSchemer::UnknownRef) { JSONSchemer.openapi({ 'openapi' => '3.1.0', 'jsonSchemaDialect' => 'unsupported' }) }
   end
 
+  def test_openapi31_path_item_ref
+    path_item = { '$ref' => 'paths.yaml#/pets', 'summary' => 'Pets' }
+    document = {
+      'openapi' => '3.1.0',
+      'info' => { 'title' => 'test', 'version' => '1' },
+      'paths' => { '/pets' => path_item },
+      'webhooks' => { 'created' => path_item },
+      'components' => {
+        'pathItems' => { 'pets' => path_item },
+        'callbacks' => { 'created' => { '{$request.body#/url}' => path_item } }
+      }
+    }
+    assert(JSONSchemer.openapi(document).valid?)
+    refute(JSONSchemer.openapi(document.merge('paths' => { '/pets' => { '$ref' => 1 } })).valid?)
+    # like in 3.0 and 3.2
+    assert(JSONSchemer.openapi({ 'openapi' => '3.0.3', 'info' => { 'title' => 'test', 'version' => '1' }, 'paths' => { '/pets' => path_item } }).valid?)
+    assert(JSONSchemer.openapi(document.merge('openapi' => '3.2.0')).valid?)
+  end
+
   def test_openapi_documents
     draft4_dialect = JSONSchemer::Draft4::BASE_URI.to_s
     draft202012_dialect = JSONSchemer::Draft202012::BASE_URI.to_s

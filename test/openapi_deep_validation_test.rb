@@ -302,6 +302,17 @@ class OpenAPIDeepValidationTest < Minitest::Test
     assert(errors.all? { |error| error.fetch('error').end_with?("which can't be retrieved: more than 2 documents referenced") })
   end
 
+  def test_openapi_31_path_item_ref
+    documents = {
+      'file:///openapi.yaml' => { 'openapi' => '3.1.0', 'info' => INFO, 'paths' => { '/pets' => { '$ref' => 'paths.yaml#/pets' } } },
+      'file:///paths.yaml' => { 'pets' => { 'get' => { 'responses' => { '200' => { 'description' => 'OK' } } } } }
+    }
+    assert_equal([], deep_errors(documents))
+    documents['file:///paths.yaml']['pets']['get']['responses'] = {}
+    # at least one response (3.1 document schema since 2024-11-14)
+    assert_equal(['file:///paths.yaml#/pets/get/responses'], error_locations(deep_errors(documents)))
+  end
+
   def test_callbacks
     documents = {
       'file:///openapi.yaml' => {

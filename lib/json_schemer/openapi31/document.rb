@@ -16,7 +16,7 @@ module JSONSchemer
       def self.dialect_schema(dialect)
         {
           '$id' => dialect.object_id.to_s,
-          '$ref' => 'https://spec.openapis.org/oas/3.1/schema/2022-10-07',
+          '$ref' => 'https://spec.openapis.org/oas/3.1/schema/2026-08-03',
           '$defs' => {
             'schema' => {
               '$dynamicAnchor' => 'meta',
@@ -102,9 +102,9 @@ module JSONSchemer
       }
 
       SCHEMA = {
-        '$id' => 'https://spec.openapis.org/oas/3.1/schema/2022-10-07',
+        '$id' => 'https://spec.openapis.org/oas/3.1/schema/2026-08-03',
         '$schema' => 'https://json-schema.org/draft/2020-12/schema',
-        'description' => 'The description of OpenAPI v3.1.x documents without schema validation, as defined by https://spec.openapis.org/oas/v3.1.0',
+        'description' => 'The description of OpenAPI v3.1.x Documents without Schema Object validation',
         'type' => 'object',
         'properties' => {
           'openapi' => {
@@ -116,8 +116,8 @@ module JSONSchemer
           },
           'jsonSchemaDialect' => {
             'type' => 'string',
-            'format' => 'uri',
-            'default' => 'https://spec.openapis.org/oas/3.1/dialect/base'
+            'format' => 'uri-reference',
+            'default' => 'https://spec.openapis.org/oas/3.1/dialect/2024-11-10'
           },
           'servers' => {
             'type' => 'array',
@@ -136,7 +136,7 @@ module JSONSchemer
           'webhooks' => {
             'type' => 'object',
             'additionalProperties' => {
-              '$ref' => '#/$defs/path-item-or-reference'
+              '$ref' => '#/$defs/path-item'
             }
           },
           'components' => {
@@ -183,7 +183,7 @@ module JSONSchemer
         'unevaluatedProperties' => false,
         '$defs' => {
           'info' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#info-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#info-object',
             'type' => 'object',
             'properties' => {
               'title' => {
@@ -197,7 +197,7 @@ module JSONSchemer
               },
               'termsOfService' => {
                 'type' => 'string',
-                'format' => 'uri'
+                'format' => 'uri-reference'
               },
               'contact' => {
                 '$ref' => '#/$defs/contact'
@@ -217,7 +217,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'contact' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#contact-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#contact-object',
             'type' => 'object',
             'properties' => {
               'name' => {
@@ -225,7 +225,7 @@ module JSONSchemer
               },
               'url' => {
                 'type' => 'string',
-                'format' => 'uri'
+                'format' => 'uri-reference'
               },
               'email' => {
                 'type' => 'string',
@@ -236,7 +236,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'license' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#license-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#license-object',
             'type' => 'object',
             'properties' => {
               'name' => {
@@ -247,7 +247,7 @@ module JSONSchemer
               },
               'url' => {
                 'type' => 'string',
-                'format' => 'uri'
+                'format' => 'uri-reference'
               }
             },
             'required' => [
@@ -266,7 +266,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'server' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#server-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#server-object',
             'type' => 'object',
             'properties' => {
               'url' => {
@@ -289,7 +289,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'server-variable' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#server-variable-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#server-variable-object',
             'type' => 'object',
             'properties' => {
               'enum' => {
@@ -313,7 +313,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'components' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#components-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#components-object',
             'type' => 'object',
             'properties' => {
               'schemas' => {
@@ -373,12 +373,12 @@ module JSONSchemer
               'pathItems' => {
                 'type' => 'object',
                 'additionalProperties' => {
-                  '$ref' => '#/$defs/path-item-or-reference'
+                  '$ref' => '#/$defs/path-item'
                 }
               }
             },
             'patternProperties' => {
-              '^(schemas|responses|parameters|examples|requestBodies|headers|securitySchemes|links|callbacks|pathItems)$' => {
+              '^(?:schemas|responses|parameters|examples|requestBodies|headers|securitySchemes|links|callbacks|pathItems)$' => {
                 '$comment' => 'Enumerating all of the property names in the regex above is necessary for unevaluatedProperties to work as expected',
                 'propertyNames' => {
                   'pattern' => '^[a-zA-Z0-9._-]+$'
@@ -389,7 +389,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'paths' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#paths-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#paths-object',
             'type' => 'object',
             'patternProperties' => {
               '^/' => {
@@ -400,9 +400,13 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'path-item' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#path-item-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#path-item-object',
             'type' => 'object',
             'properties' => {
+              '$ref' => {
+                'type' => 'string',
+                'format' => 'uri-reference'
+              },
               'summary' => {
                 'type' => 'string'
               },
@@ -449,22 +453,8 @@ module JSONSchemer
             '$ref' => '#/$defs/specification-extensions',
             'unevaluatedProperties' => false
           },
-          'path-item-or-reference' => {
-            'if' => {
-              'type' => 'object',
-              'required' => [
-                '$ref'
-              ]
-            },
-            'then' => {
-              '$ref' => '#/$defs/reference'
-            },
-            'else' => {
-              '$ref' => '#/$defs/path-item'
-            }
-          },
           'operation' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#operation-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#operation-object',
             'type' => 'object',
             'properties' => {
               'tags' => {
@@ -524,7 +514,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'external-documentation' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#external-documentation-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#external-documentation-object',
             'type' => 'object',
             'properties' => {
               'description' => {
@@ -532,7 +522,7 @@ module JSONSchemer
               },
               'url' => {
                 'type' => 'string',
-                'format' => 'uri'
+                'format' => 'uri-reference'
               }
             },
             'required' => [
@@ -542,7 +532,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'parameter' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#parameter-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#parameter-object',
             'type' => 'object',
             'properties' => {
               'name' => {
@@ -597,10 +587,7 @@ module JSONSchemer
                 'in' => {
                   'const' => 'query'
                 }
-              },
-              'required' => [
-                'in'
-              ]
+              }
             },
             'then' => {
               'properties' => {
@@ -635,9 +622,6 @@ module JSONSchemer
                   },
                   {
                     '$ref' => '#/$defs/parameter/dependentSchemas/schema/$defs/styles-for-cookie'
-                  },
-                  {
-                    '$ref' => '#/$defs/parameter/dependentSchemas/schema/$defs/styles-for-form'
                   }
                 ],
                 '$defs' => {
@@ -647,15 +631,12 @@ module JSONSchemer
                         'in' => {
                           'const' => 'path'
                         }
-                      },
-                      'required' => [
-                        'in'
-                      ]
+                      }
                     },
                     'then' => {
                       'properties' => {
                         'name' => {
-                          'pattern' => '[^/#?]+$'
+                          'pattern' => '^[^{}]+$'
                         },
                         'style' => {
                           'default' => 'simple',
@@ -667,6 +648,9 @@ module JSONSchemer
                         },
                         'required' => {
                           'const' => true
+                        },
+                        'explode' => {
+                          'default' => false
                         }
                       },
                       'required' => [
@@ -680,16 +664,16 @@ module JSONSchemer
                         'in' => {
                           'const' => 'header'
                         }
-                      },
-                      'required' => [
-                        'in'
-                      ]
+                      }
                     },
                     'then' => {
                       'properties' => {
                         'style' => {
                           'default' => 'simple',
                           'const' => 'simple'
+                        },
+                        'explode' => {
+                          'default' => false
                         }
                       }
                     }
@@ -700,10 +684,7 @@ module JSONSchemer
                         'in' => {
                           'const' => 'query'
                         }
-                      },
-                      'required' => [
-                        'in'
-                      ]
+                      }
                     },
                     'then' => {
                       'properties' => {
@@ -720,7 +701,8 @@ module JSONSchemer
                           'default' => false,
                           'type' => 'boolean'
                         }
-                      }
+                      },
+                      '$ref' => '#/$defs/explode-for-form'
                     }
                   },
                   'styles-for-cookie' => {
@@ -729,10 +711,7 @@ module JSONSchemer
                         'in' => {
                           'const' => 'cookie'
                         }
-                      },
-                      'required' => [
-                        'in'
-                      ]
+                      }
                     },
                     'then' => {
                       'properties' => {
@@ -740,33 +719,8 @@ module JSONSchemer
                           'default' => 'form',
                           'const' => 'form'
                         }
-                      }
-                    }
-                  },
-                  'styles-for-form' => {
-                    'if' => {
-                      'properties' => {
-                        'style' => {
-                          'const' => 'form'
-                        }
                       },
-                      'required' => [
-                        'style'
-                      ]
-                    },
-                    'then' => {
-                      'properties' => {
-                        'explode' => {
-                          'default' => true
-                        }
-                      }
-                    },
-                    'else' => {
-                      'properties' => {
-                        'explode' => {
-                          'default' => false
-                        }
-                      }
+                      '$ref' => '#/$defs/explode-for-form'
                     }
                   }
                 }
@@ -790,7 +744,7 @@ module JSONSchemer
             }
           },
           'request-body' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#request-body-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#request-body-object',
             'type' => 'object',
             'properties' => {
               'description' => {
@@ -825,7 +779,7 @@ module JSONSchemer
             }
           },
           'content' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#fixed-fields-10',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#fixed-fields-10',
             'type' => 'object',
             'additionalProperties' => {
               '$ref' => '#/$defs/media-type'
@@ -835,7 +789,7 @@ module JSONSchemer
             }
           },
           'media-type' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#media-type-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#media-type-object',
             'type' => 'object',
             'properties' => {
               'schema' => {
@@ -859,12 +813,12 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'encoding' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#encoding-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#encoding-object',
             'type' => 'object',
             'properties' => {
               'contentType' => {
-                'type' => 'string',
-                'format' => 'media-range'
+                '$comment' => 'one or more comma-separated media-ranges',
+                'type' => 'string'
               },
               'headers' => {
                 'type' => 'object',
@@ -873,7 +827,6 @@ module JSONSchemer
                 }
               },
               'style' => {
-                'default' => 'form',
                 'enum' => [
                   'form',
                   'spaceDelimited',
@@ -885,50 +838,42 @@ module JSONSchemer
                 'type' => 'boolean'
               },
               'allowReserved' => {
-                'default' => false,
                 'type' => 'boolean'
               }
             },
-            'allOf' => [
-              {
-                '$ref' => '#/$defs/specification-extensions'
-              },
-              {
-                '$ref' => '#/$defs/encoding/$defs/explode-default'
-              }
-            ],
-            'unevaluatedProperties' => false,
-            '$defs' => {
-              'explode-default' => {
-                'if' => {
-                  'properties' => {
-                    'style' => {
-                      'const' => 'form'
-                    }
-                  },
-                  'required' => [
-                    'style'
-                  ]
-                },
-                'then' => {
-                  'properties' => {
-                    'explode' => {
-                      'default' => true
-                    }
+            'dependentSchemas' => {
+              'style' => {
+                'properties' => {
+                  'allowReserved' => {
+                    'default' => false
                   }
                 },
-                'else' => {
-                  'properties' => {
-                    'explode' => {
-                      'default' => false
-                    }
+                '$ref' => '#/$defs/explode-for-form'
+              },
+              'explode' => {
+                'properties' => {
+                  'style' => {
+                    'default' => 'form'
+                  },
+                  'allowReserved' => {
+                    'default' => false
                   }
                 }
+              },
+              'allowReserved' => {
+                'properties' => {
+                  'style' => {
+                    'default' => 'form'
+                  }
+                },
+                '$ref' => '#/$defs/explode-for-form'
               }
-            }
+            },
+            '$ref' => '#/$defs/specification-extensions',
+            'unevaluatedProperties' => false
           },
           'responses' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#responses-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#responses-object',
             'type' => 'object',
             'properties' => {
               'default' => {
@@ -942,10 +887,21 @@ module JSONSchemer
             },
             'minProperties' => 1,
             '$ref' => '#/$defs/specification-extensions',
-            'unevaluatedProperties' => false
+            'unevaluatedProperties' => false,
+            'if' => {
+              '$comment' => 'either default, or at least one response code property must exist',
+              'patternProperties' => {
+                '^[1-5](?:[0-9]{2}|XX)$' => false
+              }
+            },
+            'then' => {
+              'required' => [
+                'default'
+              ]
+            }
           },
           'response' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#response-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#response-object',
             'type' => 'object',
             'properties' => {
               'description' => {
@@ -988,11 +944,11 @@ module JSONSchemer
             }
           },
           'callbacks' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#callback-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#callback-object',
             'type' => 'object',
             '$ref' => '#/$defs/specification-extensions',
             'additionalProperties' => {
-              '$ref' => '#/$defs/path-item-or-reference'
+              '$ref' => '#/$defs/path-item'
             }
           },
           'callbacks-or-reference' => {
@@ -1010,7 +966,7 @@ module JSONSchemer
             }
           },
           'example' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#example-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#example-object',
             'type' => 'object',
             'properties' => {
               'summary' => {
@@ -1022,7 +978,7 @@ module JSONSchemer
               'value' => true,
               'externalValue' => {
                 'type' => 'string',
-                'format' => 'uri'
+                'format' => 'uri-reference'
               }
             },
             'not' => {
@@ -1049,11 +1005,12 @@ module JSONSchemer
             }
           },
           'link' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#link-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#link-object',
             'type' => 'object',
             'properties' => {
               'operationRef' => {
-                'type' => 'string'
+                'type' => 'string',
+                'format' => 'uri-reference'
               },
               'operationId' => {
                 'type' => 'string'
@@ -1065,7 +1022,7 @@ module JSONSchemer
               'description' => {
                 'type' => 'string'
               },
-              'body' => {
+              'server' => {
                 '$ref' => '#/$defs/server'
               }
             },
@@ -1099,7 +1056,7 @@ module JSONSchemer
             }
           },
           'header' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#header-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#header-object',
             'type' => 'object',
             'properties' => {
               'description' => {
@@ -1167,7 +1124,7 @@ module JSONSchemer
             }
           },
           'tag' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#tag-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#tag-object',
             'type' => 'object',
             'properties' => {
               'name' => {
@@ -1187,7 +1144,7 @@ module JSONSchemer
             'unevaluatedProperties' => false
           },
           'reference' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#reference-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#reference-object',
             'type' => 'object',
             'properties' => {
               '$ref' => {
@@ -1200,11 +1157,10 @@ module JSONSchemer
               'description' => {
                 'type' => 'string'
               }
-            },
-            'unevaluatedProperties' => false
+            }
           },
           'schema' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#schema-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#schema-object',
             '$dynamicAnchor' => 'meta',
             'type' => [
               'object',
@@ -1212,7 +1168,7 @@ module JSONSchemer
             ]
           },
           'security-scheme' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#security-scheme-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#security-scheme-object',
             'type' => 'object',
             'properties' => {
               'type' => {
@@ -1259,10 +1215,7 @@ module JSONSchemer
                     'type' => {
                       'const' => 'apiKey'
                     }
-                  },
-                  'required' => [
-                    'type'
-                  ]
+                  }
                 },
                 'then' => {
                   'properties' => {
@@ -1289,10 +1242,7 @@ module JSONSchemer
                     'type' => {
                       'const' => 'http'
                     }
-                  },
-                  'required' => [
-                    'type'
-                  ]
+                  }
                 },
                 'then' => {
                   'properties' => {
@@ -1335,10 +1285,7 @@ module JSONSchemer
                     'type' => {
                       'const' => 'oauth2'
                     }
-                  },
-                  'required' => [
-                    'type'
-                  ]
+                  }
                 },
                 'then' => {
                   'properties' => {
@@ -1357,16 +1304,13 @@ module JSONSchemer
                     'type' => {
                       'const' => 'openIdConnect'
                     }
-                  },
-                  'required' => [
-                    'type'
-                  ]
+                  }
                 },
                 'then' => {
                   'properties' => {
                     'openIdConnectUrl' => {
                       'type' => 'string',
-                      'format' => 'uri'
+                      'format' => 'uri-reference'
                     }
                   },
                   'required' => [
@@ -1414,11 +1358,11 @@ module JSONSchemer
                 'properties' => {
                   'authorizationUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'refreshUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'scopes' => {
                     '$ref' => '#/$defs/map-of-strings'
@@ -1436,11 +1380,11 @@ module JSONSchemer
                 'properties' => {
                   'tokenUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'refreshUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'scopes' => {
                     '$ref' => '#/$defs/map-of-strings'
@@ -1458,11 +1402,11 @@ module JSONSchemer
                 'properties' => {
                   'tokenUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'refreshUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'scopes' => {
                     '$ref' => '#/$defs/map-of-strings'
@@ -1480,15 +1424,15 @@ module JSONSchemer
                 'properties' => {
                   'authorizationUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'tokenUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'refreshUrl' => {
                     'type' => 'string',
-                    'format' => 'uri'
+                    'format' => 'uri-reference'
                   },
                   'scopes' => {
                     '$ref' => '#/$defs/map-of-strings'
@@ -1505,7 +1449,7 @@ module JSONSchemer
             }
           },
           'security-requirement' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#security-requirement-object',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#security-requirement-object',
             'type' => 'object',
             'additionalProperties' => {
               'type' => 'array',
@@ -1515,7 +1459,7 @@ module JSONSchemer
             }
           },
           'specification-extensions' => {
-            '$comment' => 'https://spec.openapis.org/oas/v3.1.0#specification-extensions',
+            '$comment' => 'https://spec.openapis.org/oas/v3.1#specification-extensions',
             'patternProperties' => {
               '^x-' => true
             }
@@ -1529,12 +1473,42 @@ module JSONSchemer
                   '$ref' => '#/$defs/example-or-reference'
                 }
               }
+            },
+            'not' => {
+              'required' => [
+                'example',
+                'examples'
+              ]
             }
           },
           'map-of-strings' => {
             'type' => 'object',
             'additionalProperties' => {
               'type' => 'string'
+            }
+          },
+          'explode-for-form' => {
+            '$comment' => 'for encoding objects, and query and cookie parameters, style=form is the default',
+            'if' => {
+              'properties' => {
+                'style' => {
+                  'const' => 'form'
+                }
+              }
+            },
+            'then' => {
+              'properties' => {
+                'explode' => {
+                  'default' => true
+                }
+              }
+            },
+            'else' => {
+              'properties' => {
+                'explode' => {
+                  'default' => false
+                }
+              }
             }
           }
         }
@@ -1544,7 +1518,7 @@ module JSONSchemer
         .merge(Draft202012::Meta::SCHEMAS)
         .merge(Draft201909::Meta::SCHEMAS)
         .merge(
-          URI('https://spec.openapis.org/oas/3.1/schema/2022-10-07') => SCHEMA,
+          URI('https://spec.openapis.org/oas/3.1/schema/2026-08-03') => SCHEMA,
           OpenAPI31::BASE_URI => OpenAPI31::SCHEMA,
           Draft202012::BASE_URI => Draft202012::SCHEMA,
           Draft201909::BASE_URI => Draft201909::SCHEMA,
