@@ -63,6 +63,7 @@ require 'json_schemer/openapi30/meta'
 require 'json_schemer/openapi30/vocab/base'
 require 'json_schemer/openapi30/vocab'
 require 'json_schemer/openapi'
+require 'json_schemer/deep_validation'
 require 'json_schemer/configuration'
 require 'json_schemer/resources'
 require 'json_schemer/schema'
@@ -127,13 +128,16 @@ module JSONSchemer
       Schema.new(schema, **options)
     end
 
-    def valid_schema?(schema, **options)
+    # With `deep: true`, references are resolved and the documents they lead to validated too (see `DeepValidation`).
+    def valid_schema?(schema, deep: false, max_documents: nil, **options)
       schema = resolve(schema, options)
+      return deep_validate_schema(schema, max_documents, options.merge(:output_format => 'flag')).fetch('valid') if deep
       meta_schema(schema, options).valid?(schema, **options.slice(:output_format, :resolve_enumerators, :access_mode, :stringified_keys))
     end
 
-    def validate_schema(schema, **options)
+    def validate_schema(schema, deep: false, max_documents: nil, **options)
       schema = resolve(schema, options)
+      return deep_validate_schema(schema, max_documents, options) if deep
       meta_schema(schema, options).validate(schema, **options.slice(:output_format, :resolve_enumerators, :access_mode, :stringified_keys))
     end
 
@@ -285,6 +289,29 @@ module JSONSchemer
         end
       else
         schema
+      end
+    end
+
+    def deep_validate_schema(schema, max_documents, options)
+      output_format = options.fetch(:output_format) { configuration.output_format }
+      schema_options = options.reject { |key, _value| key == :output_format || key == :resolve_enumerators }
+      deep_validation = DeepValidation.new(
+        schema({}, **schema_options).ref_resolver,
+        :output_format => output_format,
+        :max_documents => max_documents
+      )
+      base_uri = URI(options.fetch(:base_uri) { configuration.base_uri })
+      # identified like the compiled schema: by its `$id` (draft 4 `id`) against the base URI
+      id = schema.is_a?(Hash) && (schema['$id'] || schema['id'])
+      if id.is_a?(String)
+        begin
+          base_uri = URI.join(base_uri, id)
+        rescue URI::Error
+          # invalid `$id`, reported by the meta schema
+        end
+      end
+      deep_validation.call(schema, base_uri, proc { meta_schema(schema, schema_options) }) do
+        schema(schema, **schema_options, :ref_resolver => deep_validation.resolver)
       end
     end
 

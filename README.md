@@ -95,6 +95,39 @@ JSONSchemer.validate_schema({ '$id' => '#invalid' }).to_a
 #      "type"=>"pattern",
 #      "error"=>"string at `/$id` does not match pattern: ^[^#]*#?$"}]
 
+# deep schema validation: references resolved and the documents they lead to validated too
+
+refs = {
+  URI('http://example.com/error') => { 'type' => 'object', 'properties' => { 'code' => { 'type' => 'intger' } } }
+}
+schema = {
+  '$id' => 'http://example.com/schema',
+  'properties' => { 'error' => { '$ref' => 'error' }, 'item' => { '$ref' => 'item' } }
+}
+
+JSONSchemer.valid_schema?(schema, :ref_resolver => refs.to_proc)
+# => true
+
+JSONSchemer.valid_schema?(schema, :deep => true, :ref_resolver => refs.to_proc)
+# => false
+
+JSONSchemer.validate_schema(schema, :deep => true, :ref_resolver => refs.to_proc, :output_format => 'basic')
+# => {"valid"=>false,
+#     "errors"=>
+#      [{"valid"=>false,
+#        "keywordLocation"=>"/allOf/1/$ref/properties/properties/additionalProperties/$dynamicRef/allOf/3/$ref/properties/type/anyOf",
+#        "absoluteKeywordLocation"=>"https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf",
+#        "instanceLocation"=>"/properties/code/type",
+#        "error"=>"value at `/properties/code/type` does not match any `anyOf` schemas",
+#        "absoluteInstanceLocation"=>"http://example.com/error#/properties/code/type"},
+#       ...,
+#       {"valid"=>false,
+#        "keywordLocation"=>"",
+#        "instanceLocation"=>"/properties/item/$ref",
+#        "error"=>"value at `/properties/item/$ref` references `item`, which can't be retrieved: not found",
+#        "ref"=>{"value"=>"item", "uri"=>"http://example.com/item"},
+#        "absoluteInstanceLocation"=>"http://example.com/schema#/properties/item/$ref"}]}
+
 # subschemas
 
 schema = {
@@ -143,6 +176,17 @@ schemer.bundle
 #      {"http://example.com/schema/one"=>{"type"=>"integer", "$id"=>"http://example.com/schema/one", "$schema"=>"https://json-schema.org/draft/2020-12/schema"},
 #       "http://example.com/schema/two"=>{"minimum"=>11, "$id"=>"http://example.com/schema/two", "$schema"=>"https://json-schema.org/draft/2020-12/schema"}}}
 ```
+
+## Deep Schema Validation
+
+`valid_schema?` and `validate_schema` (of `JSONSchemer` and of a schema) validate a schema document against its meta schema only. With `deep: true` they also:
+
+- resolve every reference (`$ref`, `$dynamicRef`, `$recursiveRef`) with `ref_resolver`, relative to the document it's written in, and report a reference that can't be resolved (the resolver returns `nil` or raises, a pointer or anchor that doesn't exist) as a validation error instead of raising;
+- validate every document retrieved against its own meta schema (its `$schema`, else the meta schema of the referring document) and resolve its references in turn. Each document is retrieved and validated once, so circular references end. An invalid document isn't compiled, but JSON pointers into it are still checked.
+
+Errors are located in the document they're in: `absoluteInstanceLocation` (`data_uri` in classic output) is the document's URI (its `base_uri`, `$id` or the URI it was retrieved from) with the JSON pointer of the value in it. Reference errors also have `ref`, with the reference as written (`value`) and as resolved (`uri`), and the classic `type` `ref`. `deep: true` supports the `flag`, `basic` (with `valid` and the list of `errors`) and `classic` output formats. `max_documents` limits the number of documents retrieved (references to more are errors).
+
+Like instance validation, a reference is resolved in the document it's written in and with `ref_resolver`: an `$id` declared in another document isn't found unless the resolver returns that resource for it.
 
 ## Options
 

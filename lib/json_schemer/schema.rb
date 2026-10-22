@@ -283,11 +283,14 @@ module JSONSchemer
       @value_hooks = before_value_validation.any? || after_value_validation.any? || deferred_value_validation.any?
     end
 
-    def valid_schema?(**options)
+    # With `deep: true`, references are resolved and the documents they lead to validated too (see `DeepValidation`).
+    def valid_schema?(deep: false, max_documents: nil, **options)
+      return deep_validate_schema(max_documents, 'flag').fetch('valid') if deep
       meta_schema.valid?(value, **options)
     end
 
-    def validate_schema(**options)
+    def validate_schema(deep: false, max_documents: nil, **options)
+      return deep_validate_schema(max_documents, options.fetch(:output_format) { configuration.output_format }) if deep
       meta_schema.validate(value, **options)
     end
 
@@ -591,6 +594,13 @@ module JSONSchemer
     end
 
   private
+
+    def deep_validate_schema(max_documents, output_format)
+      deep_validation = DeepValidation.new(ref_resolver, :output_format => output_format, :max_documents => max_documents)
+      deep_validation.call(value, base_uri, proc { meta_schema }) do
+        Schema.new(value, :configuration => configuration, :base_uri => base_uri, :meta_schema => meta_schema, :ref_resolver => deep_validation.resolver)
+      end
+    end
 
     # Resource identified by `uri` (without fragment) that contains `schema`: the outermost schema around it (or itself)
     # with that base URI, ie the embedded resource with that `$id` or the document, else its document (eg identified by
