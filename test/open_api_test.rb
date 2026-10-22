@@ -1097,6 +1097,34 @@ class OpenAPITest < Minitest::Test
     assert_raises(JSONSchemer::UnknownRef) { JSONSchemer.openapi({ 'openapi' => '3.1.0', 'jsonSchemaDialect' => 'unsupported' }) }
   end
 
+  def test_openapi31_dated_dialect
+    dialect = 'https://spec.openapis.org/oas/3.1/dialect/2024-11-10'
+    document = {
+      'openapi' => '3.1.1',
+      'info' => { 'title' => 'test', 'version' => '1' },
+      'jsonSchemaDialect' => dialect,
+      'paths' => {},
+      'components' => {
+        'schemas' => {
+          'count' => { 'type' => 'integer', 'format' => 'int32' },
+          'pet' => { '$schema' => dialect, 'xml' => { 'wrapped' => true } }
+        }
+      }
+    }
+    openapi = JSONSchemer.openapi(document)
+    assert(openapi.valid?)
+    assert(openapi.valid?(:deep => true))
+    assert_equal(JSONSchemer.openapi31_2024_11_10, openapi.schema('count').meta_schema)
+    assert(openapi.schema('count').valid?(1))
+    refute(openapi.schema('count').valid?(2.pow(40)))
+
+    document['components']['schemas']['pet']['xml']['wrapped'] = 1
+    assert_equal(['/components/schemas/pet/xml/wrapped'], JSONSchemer.openapi(document).validate.map { |error| error.fetch('data_pointer') })
+    refute(JSONSchemer.valid_schema?({ '$schema' => dialect, 'discriminator' => { 'propertyName' => 1 } }))
+    assert(JSONSchemer.openapi31_2024_11_10.valid_schema?)
+    assert(JSONSchemer.openapi(document.merge('openapi' => '3.2.0', 'components' => {})).valid?)
+  end
+
   def test_openapi31_path_item_ref
     path_item = { '$ref' => 'paths.yaml#/pets', 'summary' => 'Pets' }
     document = {

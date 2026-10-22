@@ -222,6 +222,17 @@ module JSONSchemer
       )
     end
 
+    # OpenAPI 3.1 dialect with dated identifiers (same keywords as `openapi31`)
+    def openapi31_2024_11_10
+      @openapi31_2024_11_10 ||= Schema.new(
+        OpenAPI31::DIALECT_2024_11_10,
+        :base_uri => OpenAPI31::DIALECT_2024_11_10_URI,
+        :formats => OpenAPI31::FORMATS,
+        :ref_resolver => OpenAPI31::Meta::SCHEMAS.to_proc,
+        :regexp_resolver => 'ecma'
+      )
+    end
+
     def openapi30
       @openapi30 ||= Schema.new(
         OpenAPI30::SCHEMA,
@@ -336,6 +347,7 @@ module JSONSchemer
     'http://json-schema.org/schema#' => method(:draft4),
     OpenAPI32::BASE_URI.to_s => method(:openapi32),
     OpenAPI31::BASE_URI.to_s => method(:openapi31),
+    OpenAPI31::DIALECT_2024_11_10_URI.to_s => method(:openapi31_2024_11_10),
     OpenAPI30::BASE_URI.to_s => method(:openapi30)
   }.freeze
 

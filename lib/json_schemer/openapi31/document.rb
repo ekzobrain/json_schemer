@@ -5,6 +5,7 @@ module JSONSchemer
       # http://json-schema.org/blog/posts/validating-openapi-and-json-schema
       DIALECTS = [
         OpenAPI31::BASE_URI.to_s,
+        OpenAPI31::DIALECT_2024_11_10_URI.to_s,
         Draft202012::BASE_URI.to_s,
         Draft201909::BASE_URI.to_s,
         Draft7::BASE_URI.to_s,
@@ -1520,6 +1521,7 @@ module JSONSchemer
         .merge(
           URI('https://spec.openapis.org/oas/3.1/schema/2026-08-03') => SCHEMA,
           OpenAPI31::BASE_URI => OpenAPI31::SCHEMA,
+          OpenAPI31::DIALECT_2024_11_10_URI => OpenAPI31::DIALECT_2024_11_10,
           Draft202012::BASE_URI => Draft202012::SCHEMA,
           Draft201909::BASE_URI => Draft201909::SCHEMA,
           Draft7::BASE_URI.dup.tap { |uri| uri.fragment = nil } => Draft7::SCHEMA,

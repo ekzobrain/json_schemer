@@ -1024,6 +1024,8 @@ class JSONSchemerTest < Minitest::Test
       JSONSchemer::Draft4::SCHEMA,
       JSONSchemer::OpenAPI31::SCHEMA,
       JSONSchemer::OpenAPI31::Meta::BASE,
+      JSONSchemer::OpenAPI31::DIALECT_2024_11_10,
+      JSONSchemer::OpenAPI31::Meta::BASE_2024_11_10,
       JSONSchemer::OpenAPI32::SCHEMA,
       JSONSchemer::OpenAPI32::Meta::BASE,
       JSONSchemer::OpenAPI32::Document::SCHEMA,

@@ -6,6 +6,7 @@ module JSONSchemer
       DIALECTS = [
         OpenAPI32::BASE_URI.to_s,
         OpenAPI31::BASE_URI.to_s,
+        OpenAPI31::DIALECT_2024_11_10_URI.to_s,
         Draft202012::BASE_URI.to_s,
         Draft201909::BASE_URI.to_s,
         Draft7::BASE_URI.to_s,
@@ -1777,6 +1778,7 @@ module JSONSchemer
           URI('https://spec.openapis.org/oas/3.2/schema/2025-09-17') => SCHEMA,
           OpenAPI32::BASE_URI => OpenAPI32::SCHEMA,
           OpenAPI31::BASE_URI => OpenAPI31::SCHEMA,
+          OpenAPI31::DIALECT_2024_11_10_URI => OpenAPI31::DIALECT_2024_11_10,
           Draft202012::BASE_URI => Draft202012::SCHEMA,
           Draft201909::BASE_URI => Draft201909::SCHEMA,
           Draft7::BASE_URI.dup.tap { |uri| uri.fragment = nil } => Draft7::SCHEMA,

@@ -16,6 +16,7 @@
 
 ### Features
 
+- The OpenAPI 3.1 dialect's dated identifiers (https://spec.openapis.org/oas/3.1/dialect/2024-11-10 and its meta schema https://spec.openapis.org/oas/3.1/meta/2024-11-10, the default `jsonSchemaDialect` of the published 3.1 document schema) are known (`JSONSchemer.openapi31_2024_11_10`), as `$schema` and as `jsonSchemaDialect` of 3.1 and 3.2 documents; they raised `UnknownRef`.
 - `deep: true` for `valid_schema?`/`validate_schema` (of `JSONSchemer` and `Schema`): references are resolved, unresolvable ones reported as validation errors, and every referenced document is validated against its own meta schema, with errors located in their document (`absoluteInstanceLocation`/`data_uri`). `max_documents` limits the documents retrieved.
 - `deep: true` for `OpenAPI#valid?`/`#validate`: Reference Objects are resolved relative to their document and their targets validated against the document schema's definition of the object expected at their position, Schema Objects validated against their dialect with their references (and `discriminator` mappings) resolved, through every document they lead to (3.1+: identifiers declared in any document reachable are indexed first). Errors are located in their document and have the kind of object `expected`.
 - `stringified_keys` option to skip key conversion for string-keyed schemas and data (davishmcclurg/json_schemer#236), and allocation optimizations (davishmcclurg/json_schemer#235).

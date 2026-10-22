@@ -204,6 +204,7 @@ JSONSchemer.schema(
   # 'http://json-schema.org/schema#': JSONSchemer.draft4
   # 'https://spec.openapis.org/oas/3.2/dialect/2025-09-17': JSONSchemer.openapi32
   # 'https://spec.openapis.org/oas/3.1/dialect/base': JSONSchemer.openapi31
+  # 'https://spec.openapis.org/oas/3.1/dialect/2024-11-10': JSONSchemer.openapi31_2024_11_10
   # 'json-schemer://openapi30/schema': JSONSchemer.openapi30
   # default: JSONSchemer.draft202012
   meta_schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -825,7 +826,7 @@ In the example above, custom error messsages are looked up using the following k
 
 ## OpenAPI
 
-Documents are validated with the document schema of their version (`openapi`: `3.0.x`, `3.1.x` or `3.2.x`), so fields added in a later version are invalid in documents of an earlier one. Schemas in `components` use `jsonSchemaDialect`, or by default the dialect of the version: `https://spec.openapis.org/oas/3.2/dialect/2025-09-17` (`JSONSchemer.openapi32`) for 3.2, `https://spec.openapis.org/oas/3.1/dialect/base` (`JSONSchemer.openapi31`) for 3.1 and `JSONSchemer.openapi30` for 3.0.
+Documents are validated with the document schema of their version (`openapi`: `3.0.x`, `3.1.x` or `3.2.x`), so fields added in a later version are invalid in documents of an earlier one. Schemas in `components` use `jsonSchemaDialect`, or by default the dialect of the version: `https://spec.openapis.org/oas/3.2/dialect/2025-09-17` (`JSONSchemer.openapi32`) for 3.2, `https://spec.openapis.org/oas/3.1/dialect/base` (`JSONSchemer.openapi31`) for 3.1 and `JSONSchemer.openapi30` for 3.0. The 3.1 dialect is also known by its dated identifier, `https://spec.openapis.org/oas/3.1/dialect/2024-11-10` (`JSONSchemer.openapi31_2024_11_10`, the default `jsonSchemaDialect` of the published 3.1 document schema).
 
 `discriminator` doesn't change the validation outcome in OpenAPI 3.1.1+ and 3.2 documents ("discriminator MUST NOT change the validation outcome of the schema"): `anyOf`, `oneOf` and `allOf` are evaluated as usual, and when `anyOf`/`oneOf` are invalid only the errors of the subschema selected by the discriminating property are reported. In OpenAPI 3.0 and 3.1.0 documents, which allow the discriminator to shortcut validation, the selected schema validates the instance instead (an instance without the discriminating property or with an unmapped value is invalid). The `discriminator_mode` option overrides this.
 

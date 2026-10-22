@@ -2,6 +2,9 @@
 module JSONSchemer
   module OpenAPI31
     BASE_URI = URI('https://spec.openapis.org/oas/3.1/dialect/base')
+    # the same dialect, published with dated identifiers (the default `jsonSchemaDialect` of the 3.1 document schema
+    # since 2024-11-14; the 3.1 specification names `BASE_URI`)
+    DIALECT_2024_11_10_URI = URI('https://spec.openapis.org/oas/3.1/dialect/2024-11-10')
     # https://spec.openapis.org/oas/v3.1.0#data-types
     FORMATS = {
       'int32' => proc { |instance, _format| !Draft202012::Vocab::Validation::Type.valid_integer?(instance) || instance.floor.bit_length < 32 },
@@ -36,6 +39,32 @@ module JSONSchemer
       ]
     }
 
+
+    DIALECT_2024_11_10 = {
+      '$id' => 'https://spec.openapis.org/oas/3.1/dialect/2024-11-10',
+      '$schema' => 'https://json-schema.org/draft/2020-12/schema',
+      'title' => 'OpenAPI 3.1 Schema Object Dialect',
+      'description' => 'A JSON Schema dialect describing schemas found in OpenAPI v3.1 Descriptions',
+      '$dynamicAnchor' => 'meta',
+      '$vocabulary' => {
+        'https://json-schema.org/draft/2020-12/vocab/applicator' => true,
+        'https://json-schema.org/draft/2020-12/vocab/content' => true,
+        'https://json-schema.org/draft/2020-12/vocab/core' => true,
+        'https://json-schema.org/draft/2020-12/vocab/format-annotation' => true,
+        'https://json-schema.org/draft/2020-12/vocab/meta-data' => true,
+        'https://json-schema.org/draft/2020-12/vocab/unevaluated' => true,
+        'https://json-schema.org/draft/2020-12/vocab/validation' => true,
+        'https://spec.openapis.org/oas/3.1/vocab/base' => false
+      },
+      'allOf' => [
+        {
+          '$ref' => 'https://json-schema.org/draft/2020-12/schema'
+        },
+        {
+          '$ref' => 'https://spec.openapis.org/oas/3.1/meta/2024-11-10'
+        }
+      ]
+    }
 
     module Meta
       BASE = {
@@ -127,9 +156,103 @@ module JSONSchemer
       }
 
 
+      BASE_2024_11_10 = {
+        '$id' => 'https://spec.openapis.org/oas/3.1/meta/2024-11-10',
+        '$schema' => 'https://json-schema.org/draft/2020-12/schema',
+        'title' => 'OAS Base Vocabulary',
+        'description' => 'A JSON Schema Vocabulary used in the OpenAPI Schema Dialect',
+        '$dynamicAnchor' => 'meta',
+        '$vocabulary' => {
+          'https://spec.openapis.org/oas/3.1/vocab/base' => true
+        },
+        'type' => [
+          'object',
+          'boolean'
+        ],
+        'properties' => {
+          'discriminator' => {
+            '$ref' => '#/$defs/discriminator'
+          },
+          'example' => true,
+          'externalDocs' => {
+            '$ref' => '#/$defs/external-docs'
+          },
+          'xml' => {
+            '$ref' => '#/$defs/xml'
+          }
+        },
+        '$defs' => {
+          'discriminator' => {
+            '$ref' => '#/$defs/extensible',
+            'properties' => {
+              'mapping' => {
+                'additionalProperties' => {
+                  'type' => 'string'
+                },
+                'type' => 'object'
+              },
+              'propertyName' => {
+                'type' => 'string'
+              }
+            },
+            'required' => [
+              'propertyName'
+            ],
+            'type' => 'object',
+            'unevaluatedProperties' => false
+          },
+          'extensible' => {
+            'patternProperties' => {
+              '^x-' => true
+            }
+          },
+          'external-docs' => {
+            '$ref' => '#/$defs/extensible',
+            'properties' => {
+              'description' => {
+                'type' => 'string'
+              },
+              'url' => {
+                'format' => 'uri-reference',
+                'type' => 'string'
+              }
+            },
+            'required' => [
+              'url'
+            ],
+            'type' => 'object',
+            'unevaluatedProperties' => false
+          },
+          'xml' => {
+            '$ref' => '#/$defs/extensible',
+            'properties' => {
+              'attribute' => {
+                'type' => 'boolean'
+              },
+              'name' => {
+                'type' => 'string'
+              },
+              'namespace' => {
+                'format' => 'uri',
+                'type' => 'string'
+              },
+              'prefix' => {
+                'type' => 'string'
+              },
+              'wrapped' => {
+                'type' => 'boolean'
+              }
+            },
+            'type' => 'object',
+            'unevaluatedProperties' => false
+          }
+        }
+      }
+
       SCHEMAS = Draft202012::Meta::SCHEMAS.merge(
         Draft202012::BASE_URI => Draft202012::SCHEMA,
-        URI('https://spec.openapis.org/oas/3.1/meta/base') => BASE
+        URI('https://spec.openapis.org/oas/3.1/meta/base') => BASE,
+        URI('https://spec.openapis.org/oas/3.1/meta/2024-11-10') => BASE_2024_11_10
       )
     end
   end
